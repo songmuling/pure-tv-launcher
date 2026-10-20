@@ -100,6 +100,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private RecyclerView grid;
     private FrameLayout root;
     private WallpaperPlayer wallpaperPlayer;
+    private WeatherParticleView weatherParticles;
+    private TextView weatherInfo;
     private GlassView glass;
     private View ambient;
     private TextView heroName;
@@ -237,9 +239,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             updateWifiLabel();
             sky.update();
             wallpaperPlayer.update();
-            if (getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE).getBoolean("bing_wallpaper", true)) {
-                BingWallpaper.fetch(MainActivity.this, file -> wallpaperPlayer.setWallpaper(file, 45));
-            }
+            updateWeatherAndWallpaper();
             handler.postDelayed(this, MINUTE_MS);
         }
     };
@@ -269,9 +269,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         root = findViewById(R.id.root);
         root.setBackgroundColor(cfg.backgroundColor);
         wallpaperPlayer = new WallpaperPlayer(this, root, cfg);
-        if (getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE).getBoolean("bing_wallpaper", true)) {
-            BingWallpaper.fetch(this, file -> wallpaperPlayer.setWallpaper(file, 45));
+        weatherParticles = findViewById(R.id.weatherParticles);
+        weatherInfo = findViewById(R.id.weatherInfo);
+        if (weatherInfo != null) {
+            weatherInfo.setOnClickListener(v -> updateWeatherAndWallpaper());
         }
+        updateWeatherAndWallpaper();
         sky = findViewById(R.id.sky);
         sky.setIntensity(cfg.skyIntensity);
         glass = findViewById(R.id.glass);
@@ -556,9 +559,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (showStats) startStats();
         sky.update();
         wallpaperPlayer.start();
-        if (getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE).getBoolean("bing_wallpaper", true)) {
-            BingWallpaper.fetch(this, file -> wallpaperPlayer.setWallpaper(file, 45));
-        }
+        if (weatherParticles != null) weatherParticles.start();
+        updateWeatherAndWallpaper();
         handler.postDelayed(minuteTick, MINUTE_MS);
         if (festive && diya != null) {
             diya.start();
@@ -652,6 +654,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onPause();
         endReorder();   // Home or another app while reordering keeps the order so far
         wallpaperPlayer.stop();
+        if (weatherParticles != null) weatherParticles.stop();
         stopAmbientAnimation();
         heroName.animate().cancel();
         ambient.animate().cancel();
@@ -2013,17 +2016,29 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         PopupWindow popup = glassPopup(panel, (int) (200 * density));
         addSettingsMenuRow(rows, popup, R.string.launcher_settings, () -> startActivityForResult(
                 new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
-        boolean bingEnabled = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE).getBoolean("bing_wallpaper", true);
-        addSettingsMenuRow(rows, popup, bingEnabled ? R.string.bing_wallpaper_off : R.string.bing_wallpaper_on, () -> {
-            boolean next = !bingEnabled;
-            getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE).edit().putBoolean("bing_wallpaper", next).apply();
-            if (next) {
-                BingWallpaper.fetch(this, file -> wallpaperPlayer.setWallpaper(file, 45));
-                Toast.makeText(this, R.string.bing_wallpaper_on, Toast.LENGTH_SHORT).show();
+        SharedPreferences sp = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
+        String currentMode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_WEATHER);
+        int modeTextRes;
+        if (LauncherSettingsActivity.MODE_WEATHER.equals(currentMode)) {
+            modeTextRes = R.string.wallpaper_mode_weather;
+        } else if (LauncherSettingsActivity.MODE_BING.equals(currentMode)) {
+            modeTextRes = R.string.wallpaper_mode_bing;
+        } else {
+            modeTextRes = R.string.wallpaper_mode_off;
+        }
+        String rowLabel = getString(R.string.wallpaper_mode_label, getString(modeTextRes));
+        addSettingsMenuRow(rows, popup, rowLabel, () -> {
+            String nextMode;
+            if (LauncherSettingsActivity.MODE_WEATHER.equals(currentMode)) {
+                nextMode = LauncherSettingsActivity.MODE_BING;
+            } else if (LauncherSettingsActivity.MODE_BING.equals(currentMode)) {
+                nextMode = LauncherSettingsActivity.MODE_OFF;
             } else {
-                wallpaperPlayer.clearWallpaper();
-                Toast.makeText(this, R.string.bing_wallpaper_off, Toast.LENGTH_SHORT).show();
+                nextMode = LauncherSettingsActivity.MODE_WEATHER;
             }
+            sp.edit().putString("wallpaper_mode", nextMode)
+                    .putBoolean("bing_wallpaper", LauncherSettingsActivity.MODE_BING.equals(nextMode)).apply();
+            updateWeatherAndWallpaper();
         });
         if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
         if (dockRow) addSettingsMenuRow(rows, popup, R.string.dock_edit, this::startDockEdit);
@@ -2036,7 +2051,72 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         rows.getChildAt(0).requestFocus();
     }
 
+    private void updateWeatherAndWallpaper() {
+        SharedPreferences sp = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
+        String mode;
+        if (sp.contains("wallpaper_mode")) {
+            mode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_WEATHER);
+        } else if (sp.contains("bing_wallpaper")) {
+            mode = sp.getBoolean("bing_wallpaper", true) ? LauncherSettingsActivity.MODE_BING : LauncherSettingsActivity.MODE_OFF;
+        } else {
+            mode = LauncherSettingsActivity.MODE_WEATHER;
+        }
+
+        boolean particlesEnabled = sp.getBoolean("weather_particles", true);
+        if (weatherParticles != null) {
+            weatherParticles.setParticleEnabled(particlesEnabled);
+        }
+
+        if (LauncherSettingsActivity.MODE_WEATHER.equals(mode)) {
+            WeatherManager.fetch(this, info -> {
+                if (isFinishing() || isDestroyed()) return;
+                applyWeather(info);
+            });
+        } else if (LauncherSettingsActivity.MODE_BING.equals(mode)) {
+            if (weatherParticles != null) weatherParticles.setWeatherCondition(null);
+            BingWallpaper.fetch(this, file -> wallpaperPlayer.setWallpaper(file, 45));
+            WeatherManager.fetch(this, info -> {
+                if (isFinishing() || isDestroyed()) return;
+                if (weatherInfo != null) {
+                    weatherInfo.setText(info.getSummary());
+                    weatherInfo.setVisibility(View.VISIBLE);
+                }
+            });
+        } else {
+            wallpaperPlayer.clearWallpaper();
+            if (weatherParticles != null) weatherParticles.setWeatherCondition(null);
+            WeatherManager.fetch(this, info -> {
+                if (isFinishing() || isDestroyed()) return;
+                if (weatherInfo != null) {
+                    weatherInfo.setText(info.getSummary());
+                    weatherInfo.setVisibility(View.VISIBLE);
+                }
+            });
+        }
+    }
+
+    private void applyWeather(WeatherManager.WeatherInfo info) {
+        if (info == null) return;
+        if (weatherInfo != null) {
+            weatherInfo.setText(info.getSummary());
+            weatherInfo.setVisibility(View.VISIBLE);
+        }
+        SharedPreferences sp = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
+        String mode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_WEATHER);
+        if (LauncherSettingsActivity.MODE_WEATHER.equals(mode)) {
+            int resId = WeatherManager.getWallpaperResId(info.condition);
+            wallpaperPlayer.setWallpaperResource(resId, 45);
+            if (weatherParticles != null) {
+                weatherParticles.setWeatherCondition(info.condition);
+            }
+        }
+    }
+
     private void addSettingsMenuRow(LinearLayout rows, PopupWindow popup, int title, Runnable action) {
+        addSettingsMenuRow(rows, popup, getText(title), action);
+    }
+
+    private void addSettingsMenuRow(LinearLayout rows, PopupWindow popup, CharSequence title, Runnable action) {
         View row = getLayoutInflater().inflate(R.layout.item_input, rows, false);
         row.findViewById(R.id.icon).setVisibility(View.GONE);
         row.findViewById(R.id.dot).setVisibility(View.GONE);

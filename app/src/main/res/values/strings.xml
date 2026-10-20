@@ -102,4 +102,9 @@
     <string name="hidden_apps_empty">No hidden apps.\nHold OK on any app tile to hide it.</string>
     <string name="restore_to_home">Restore to Home</string>
     <string name="restore_toast">Restored \"%1$s\" to Home</string>
+    <string name="wallpaper_mode_label">Wallpaper: %1$s</string>
+    <string name="wallpaper_mode_weather">Weather Dynamic</string>
+    <string name="wallpaper_mode_bing">Bing Daily</string>
+    <string name="wallpaper_mode_off">Off (Pure Black)</string>
+    <string name="weather_particles_label">Weather Particles (Rain/Snow/Stars): %1$s</string>
 </resources>

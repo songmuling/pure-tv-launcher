@@ -12,6 +12,13 @@
         android:layout_height="match_parent"
         android:importantForAccessibility="no" />
 
+    <!-- Lightweight TV dynamic weather particles (rain, snow, night stars) -->
+    <com.gathin.tvhome.WeatherParticleView
+        android:id="@+id/weatherParticles"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no" />
+
     <!-- Ambient glow in the colour of the focused dock app. -->
     <View
         android:id="@+id/ambient"
@@ -157,6 +164,22 @@
                             android:fontFamily="@font/outfit_regular"
                             android:letterSpacing="0.14"
                             android:textAllCaps="true" />
+
+                        <!-- Weather & Temperature indicator (e.g. 21°C 晴 · 大阪) -->
+                        <TextView
+                            android:id="@+id/weatherInfo"
+                            android:gravity="left"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:singleLine="true"
+                            android:ellipsize="end"
+                            android:textColor="#B3FFFFFF"
+                            android:textSize="13sp"
+                            android:fontFamily="@font/outfit_regular"
+                            android:letterSpacing="0.08"
+                            android:includeFontPadding="false"
+                            android:visibility="gone" />
                     </LinearLayout>
                 </LinearLayout>
 

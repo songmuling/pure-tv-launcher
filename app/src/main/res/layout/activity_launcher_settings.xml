@@ -60,9 +60,14 @@
             android:textSize="14sp" />
 
         <TextView
-            android:id="@+id/bingChoice"
+            android:id="@+id/wallpaperModeChoice"
             style="@style/SettingsRow"
             android:layout_marginTop="18dp" />
+
+        <TextView
+            android:id="@+id/weatherParticlesChoice"
+            style="@style/SettingsRow"
+            android:layout_marginTop="10dp" />
 
         <TextView
             android:id="@+id/followThemeChoice"

@@ -13,16 +13,22 @@ import android.widget.Toast;
 
 /** Remote-friendly settings owned by the launcher; system settings stay one row away. */
 public final class LauncherSettingsActivity extends Activity {
+    public static final String MODE_WEATHER = "weather";
+    public static final String MODE_BING = "bing";
+    public static final String MODE_OFF = "off";
+
     private SharedPreferences choices;
     private final TextView[] columnChoices = new TextView[4];
     private TextView animationsChoice;
     private TextView advancedChoice;
-    private TextView bingChoice;
+    private TextView wallpaperModeChoice;
+    private TextView weatherParticlesChoice;
     private TextView followThemeChoice;
     private int columns;
     private boolean animations;
     private boolean advancedEffects;
-    private boolean bingWallpaper;
+    private String wallpaperMode;
+    private boolean weatherParticles;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -75,23 +81,51 @@ public final class LauncherSettingsActivity extends Activity {
                         .show();
             }
         });
-        bingWallpaper = choices.getBoolean("bing_wallpaper", true);
-        bingChoice = findViewById(R.id.bingChoice);
-        bingChoice.setOnClickListener(v -> {
-            bingWallpaper = !bingWallpaper;
-            choices.edit().putBoolean("bing_wallpaper", bingWallpaper).apply();
+        if (choices.contains("wallpaper_mode")) {
+            wallpaperMode = choices.getString("wallpaper_mode", MODE_WEATHER);
+        } else if (choices.contains("bing_wallpaper")) {
+            wallpaperMode = choices.getBoolean("bing_wallpaper", true) ? MODE_BING : MODE_OFF;
+        } else {
+            wallpaperMode = MODE_WEATHER;
+        }
+        weatherParticles = choices.getBoolean("weather_particles", true);
+
+        wallpaperModeChoice = findViewById(R.id.wallpaperModeChoice);
+        wallpaperModeChoice.setOnClickListener(v -> {
+            if (MODE_WEATHER.equals(wallpaperMode)) {
+                wallpaperMode = MODE_BING;
+            } else if (MODE_BING.equals(wallpaperMode)) {
+                wallpaperMode = MODE_OFF;
+            } else {
+                wallpaperMode = MODE_WEATHER;
+            }
+            choices.edit()
+                    .putString("wallpaper_mode", wallpaperMode)
+                    .putBoolean("bing_wallpaper", MODE_BING.equals(wallpaperMode))
+                    .apply();
             setResult(RESULT_OK);
             refresh();
         });
+
+        weatherParticlesChoice = findViewById(R.id.weatherParticlesChoice);
+        weatherParticlesChoice.setOnClickListener(v -> {
+            weatherParticles = !weatherParticles;
+            choices.edit().putBoolean("weather_particles", weatherParticles).apply();
+            setResult(RESULT_OK);
+            refresh();
+        });
+
         followThemeChoice = findViewById(R.id.followThemeChoice);
         followThemeChoice.setOnClickListener(v -> {
             if (!hasOnTvChoices()) return;
-            choices.edit().remove("columns").remove("animations").remove("advanced_effects").remove("bing_wallpaper").commit();
+            choices.edit().remove("columns").remove("animations").remove("advanced_effects")
+                    .remove("bing_wallpaper").remove("wallpaper_mode").remove("weather_particles").commit();
             Config current = Config.load(this);
             columns = current.columns;
             animations = current.animations;
             advancedEffects = current.animations && current.advancedEffects;
-            bingWallpaper = true;
+            wallpaperMode = MODE_WEATHER;
+            weatherParticles = true;
             setResult(RESULT_OK);
             refresh();
         });
@@ -122,14 +156,25 @@ public final class LauncherSettingsActivity extends Activity {
                 getString(advancedEffects ? R.string.on : R.string.off)));
         advancedChoice.setEnabled(animations);
         advancedChoice.setAlpha(animations ? 1f : 0.5f);
-        bingChoice.setText(getString(R.string.bing_wallpaper_label,
-                getString(bingWallpaper ? R.string.on : R.string.off)));
+
+        String modeName;
+        if (MODE_WEATHER.equals(wallpaperMode)) {
+            modeName = getString(R.string.wallpaper_mode_weather);
+        } else if (MODE_BING.equals(wallpaperMode)) {
+            modeName = getString(R.string.wallpaper_mode_bing);
+        } else {
+            modeName = getString(R.string.wallpaper_mode_off);
+        }
+        wallpaperModeChoice.setText(getString(R.string.wallpaper_mode_label, modeName));
+        weatherParticlesChoice.setText(getString(R.string.weather_particles_label,
+                getString(weatherParticles ? R.string.on : R.string.off)));
         followThemeChoice.setSelected(!hasOnTvChoices());
     }
 
     private boolean hasOnTvChoices() {
         return choices.contains("columns") || choices.contains("animations")
-                || choices.contains("advanced_effects") || choices.contains("bing_wallpaper");
+                || choices.contains("advanced_effects") || choices.contains("bing_wallpaper")
+                || choices.contains("wallpaper_mode") || choices.contains("weather_particles");
     }
 
     private void open(Intent intent) {

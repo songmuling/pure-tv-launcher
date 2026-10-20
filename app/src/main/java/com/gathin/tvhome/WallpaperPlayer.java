@@ -161,6 +161,7 @@ final class WallpaperPlayer {
 
     void setWallpaper(File file, int dim) {
         if (file == null || !file.exists() || closed) return;
+        currentResId = -1;
         decoder.execute(() -> {
             Bitmap bitmap = decode(file);
             if (bitmap != null) {
@@ -185,7 +186,61 @@ final class WallpaperPlayer {
         });
     }
 
+    private int currentResId = -1;
+
+    void setWallpaperResource(int resId, int dim) {
+        if (resId <= 0 || resId == currentResId || closed) return;
+        currentResId = resId;
+        decoder.execute(() -> {
+            Bitmap bitmap = decodeResource(resId);
+            if (bitmap != null) {
+                image.post(() -> {
+                    if (closed) return;
+                    if (image.getParent() == null) {
+                        root.addView(image, 0, new FrameLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                    }
+                    if (dim > 0 && shadeView == null) {
+                        shadeView = new View(image.getContext());
+                        shadeView.setBackgroundColor((dim * 255 / 100) << 24);
+                        shadeView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+                        root.addView(shadeView, 1, new FrameLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                    }
+                    image.setImageBitmap(bitmap);
+                    image.setAlpha(0f);
+                    image.animate().alpha(1f).setDuration(400).start();
+                });
+            }
+        });
+    }
+
+    private Bitmap decodeResource(int resId) {
+        try {
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            BitmapFactory.decodeResource(root.getResources(), resId, options);
+            int width = options.outWidth, height = options.outHeight;
+            if (width <= 0 || height <= 0) return null;
+            int sample = WallpaperSize.sampleSize(width, height, this.width, this.height);
+            if (!WallpaperSize.accepted(width / sample, height / sample)) return null;
+            options.inJustDecodeBounds = false;
+            options.inSampleSize = sample;
+            int[] scale = WallpaperSize.coverScale(width / sample, height / sample, this.width, this.height);
+            if (scale != null) {
+                options.inScaled = true;
+                options.inDensity = scale[0];
+                options.inTargetDensity = scale[1];
+            }
+            options.inPreferredConfig = Bitmap.Config.RGB_565;
+            return BitmapFactory.decodeResource(root.getResources(), resId, options);
+        } catch (Exception | OutOfMemoryError failure) {
+            return null;
+        }
+    }
+
     void clearWallpaper() {
+        currentResId = -1;
         image.post(() -> {
             image.setImageDrawable(null);
             if (image.getParent() != null) root.removeView(image);
