@@ -237,6 +237,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             updateWifiLabel();
             sky.update();
             wallpaperPlayer.update();
+            if (getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE).getBoolean("bing_wallpaper", true)) {
+                BingWallpaper.fetch(MainActivity.this, file -> wallpaperPlayer.setWallpaper(file, 45));
+            }
             handler.postDelayed(this, MINUTE_MS);
         }
     };
@@ -266,6 +269,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         root = findViewById(R.id.root);
         root.setBackgroundColor(cfg.backgroundColor);
         wallpaperPlayer = new WallpaperPlayer(this, root, cfg);
+        if (getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE).getBoolean("bing_wallpaper", true)) {
+            BingWallpaper.fetch(this, file -> wallpaperPlayer.setWallpaper(file, 45));
+        }
         sky = findViewById(R.id.sky);
         sky.setIntensity(cfg.skyIntensity);
         glass = findViewById(R.id.glass);
@@ -550,6 +556,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (showStats) startStats();
         sky.update();
         wallpaperPlayer.start();
+        if (getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE).getBoolean("bing_wallpaper", true)) {
+            BingWallpaper.fetch(this, file -> wallpaperPlayer.setWallpaper(file, 45));
+        }
         handler.postDelayed(minuteTick, MINUTE_MS);
         if (festive && diya != null) {
             diya.start();
@@ -1944,6 +1953,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         PopupWindow popup = glassPopup(panel, (int) (200 * density));
         addSettingsMenuRow(rows, popup, R.string.launcher_settings, () -> startActivityForResult(
                 new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
+        boolean bingEnabled = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE).getBoolean("bing_wallpaper", true);
+        addSettingsMenuRow(rows, popup, bingEnabled ? R.string.bing_wallpaper_off : R.string.bing_wallpaper_on, () -> {
+            boolean next = !bingEnabled;
+            getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE).edit().putBoolean("bing_wallpaper", next).apply();
+            if (next) {
+                BingWallpaper.fetch(this, file -> wallpaperPlayer.setWallpaper(file, 45));
+                Toast.makeText(this, R.string.bing_wallpaper_on, Toast.LENGTH_SHORT).show();
+            } else {
+                wallpaperPlayer.clearWallpaper();
+                Toast.makeText(this, R.string.bing_wallpaper_off, Toast.LENGTH_SHORT).show();
+            }
+        });
         if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
         if (dockRow) addSettingsMenuRow(rows, popup, R.string.dock_edit, this::startDockEdit);
         addSettingsMenuRow(rows, popup, R.string.reorder, this::toggleReorder);

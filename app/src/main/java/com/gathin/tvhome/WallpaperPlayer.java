@@ -158,4 +158,43 @@ final class WallpaperPlayer {
             return null;
         }
     }
+
+    void setWallpaper(File file, int dim) {
+        if (file == null || !file.exists() || closed) return;
+        decoder.execute(() -> {
+            Bitmap bitmap = decode(file);
+            if (bitmap != null) {
+                image.post(() -> {
+                    if (closed) return;
+                    if (image.getParent() == null) {
+                        root.addView(image, 0, new FrameLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                    }
+                    if (dim > 0 && shadeView == null) {
+                        shadeView = new View(image.getContext());
+                        shadeView.setBackgroundColor((dim * 255 / 100) << 24);
+                        shadeView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+                        root.addView(shadeView, 1, new FrameLayout.LayoutParams(
+                                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                    }
+                    image.setImageBitmap(bitmap);
+                    image.setAlpha(0f);
+                    image.animate().alpha(1f).setDuration(400).start();
+                });
+            }
+        });
+    }
+
+    void clearWallpaper() {
+        image.post(() -> {
+            image.setImageDrawable(null);
+            if (image.getParent() != null) root.removeView(image);
+            if (shadeView != null && shadeView.getParent() != null) {
+                root.removeView(shadeView);
+                shadeView = null;
+            }
+        });
+    }
+
+    private View shadeView;
 }

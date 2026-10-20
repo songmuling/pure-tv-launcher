@@ -17,10 +17,12 @@ public final class LauncherSettingsActivity extends Activity {
     private final TextView[] columnChoices = new TextView[4];
     private TextView animationsChoice;
     private TextView advancedChoice;
+    private TextView bingChoice;
     private TextView followThemeChoice;
     private int columns;
     private boolean animations;
     private boolean advancedEffects;
+    private boolean bingWallpaper;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -73,14 +75,23 @@ public final class LauncherSettingsActivity extends Activity {
                         .show();
             }
         });
+        bingWallpaper = choices.getBoolean("bing_wallpaper", true);
+        bingChoice = findViewById(R.id.bingChoice);
+        bingChoice.setOnClickListener(v -> {
+            bingWallpaper = !bingWallpaper;
+            choices.edit().putBoolean("bing_wallpaper", bingWallpaper).apply();
+            setResult(RESULT_OK);
+            refresh();
+        });
         followThemeChoice = findViewById(R.id.followThemeChoice);
         followThemeChoice.setOnClickListener(v -> {
             if (!hasOnTvChoices()) return;
-            choices.edit().remove("columns").remove("animations").remove("advanced_effects").commit();
+            choices.edit().remove("columns").remove("animations").remove("advanced_effects").remove("bing_wallpaper").commit();
             Config current = Config.load(this);
             columns = current.columns;
             animations = current.animations;
             advancedEffects = current.animations && current.advancedEffects;
+            bingWallpaper = true;
             setResult(RESULT_OK);
             refresh();
         });
@@ -111,12 +122,14 @@ public final class LauncherSettingsActivity extends Activity {
                 getString(advancedEffects ? R.string.on : R.string.off)));
         advancedChoice.setEnabled(animations);
         advancedChoice.setAlpha(animations ? 1f : 0.5f);
+        bingChoice.setText(getString(R.string.bing_wallpaper_label,
+                getString(bingWallpaper ? R.string.on : R.string.off)));
         followThemeChoice.setSelected(!hasOnTvChoices());
     }
 
     private boolean hasOnTvChoices() {
         return choices.contains("columns") || choices.contains("animations")
-                || choices.contains("advanced_effects");
+                || choices.contains("advanced_effects") || choices.contains("bing_wallpaper");
     }
 
     private void open(Intent intent) {
