@@ -43,7 +43,7 @@
     <string name="reorder">调整应用顺序</string>
     <string name="reorder_hint">按确定选中应用，方向键移动，按返回放下。再按一次返回完成。</string>
     <string name="reorder_not_saved">无法保存新顺序</string>
-    <string name="app_library">应用库</string>
+    <string name="app_library">已隐藏应用</string>
     <string name="library_empty">未找到可启动的应用</string>
     <string name="library_on_home">已在主屏幕</string>
     <string name="library_add_home">添加到主屏幕</string>
@@ -61,4 +61,13 @@
     <string name="bing_wallpaper_on">开启必应每日壁纸</string>
     <string name="bing_wallpaper_off">关闭必应每日壁纸</string>
     <string name="bing_wallpaper_label">必应每日壁纸：%1$s</string>
+    <string name="tile_action_move">移动排序</string>
+    <string name="tile_action_pin_dock">置顶到首行常用</string>
+    <string name="tile_action_unpin_dock">移出首行常用</string>
+    <string name="tile_action_hide">从桌面隐藏</string>
+    <string name="app_hidden_toast">已从桌面隐藏“%1$s”，可在隐藏应用库中找回</string>
+    <string name="hidden_apps_title">已隐藏的应用</string>
+    <string name="hidden_apps_empty">暂无隐藏的应用\n长按任意桌面图标可选择「从桌面隐藏」</string>
+    <string name="restore_to_home">恢复显示到桌面</string>
+    <string name="restore_toast">已将“%1$s”恢复到桌面</string>
 </resources>

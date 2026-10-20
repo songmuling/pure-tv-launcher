@@ -73,7 +73,7 @@
     <string name="reorder">Reorder apps</string>
     <string name="reorder_hint">OK picks up an app, arrows move it, Back places it. Back again to finish.</string>
     <string name="reorder_not_saved">Couldn\'t save the new order</string>
-    <string name="app_library">App library</string>
+    <string name="app_library">Hidden Apps</string>
     <string name="library_empty">No launchable apps found</string>
     <string name="library_on_home">On Home</string>
     <string name="library_add_home">Add to Home</string>
@@ -93,4 +93,13 @@
     <string name="bing_wallpaper_on">Enable Bing Daily Wallpaper</string>
     <string name="bing_wallpaper_off">Disable Bing Daily Wallpaper</string>
     <string name="bing_wallpaper_label">Bing Daily Wallpaper: %1$s</string>
+    <string name="tile_action_move">Move / Reorder</string>
+    <string name="tile_action_pin_dock">Pin to Top Dock</string>
+    <string name="tile_action_unpin_dock">Remove from Dock</string>
+    <string name="tile_action_hide">Hide from Home</string>
+    <string name="app_hidden_toast">Hidden \"%1$s\" from Home</string>
+    <string name="hidden_apps_title">Hidden Apps</string>
+    <string name="hidden_apps_empty">No hidden apps.\nHold OK on any app tile to hide it.</string>
+    <string name="restore_to_home">Restore to Home</string>
+    <string name="restore_toast">Restored \"%1$s\" to Home</string>
 </resources>

@@ -977,7 +977,67 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         // Home screen: Back goes nowhere.
     }
 
-    // ---- glass highlight -------------------------------------------------------------------------
+    @Override
+    public void onTileLongClick(int position, View card, AppAdapter.Entry entry) {
+        if (entry == null || entry.pkg == null || reordering) return;
+        showTileActionMenu(position, card, entry);
+    }
+
+    private void showTileActionMenu(int position, View card, AppAdapter.Entry entry) {
+        if (openPopup != null) openPopup.dismiss();
+        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
+        LinearLayout rows = panel.findViewById(R.id.rows);
+        PopupWindow popup = glassPopup(panel, (int) (220 * density));
+
+        // 1. 移动排序 (所见即所得：直接拿起磁贴开始移动)
+        addSettingsMenuRow(rows, popup, R.string.tile_action_move, () -> {
+            if (!reordering) {
+                if (beginReorder()) {
+                    focusTile(position);
+                    pickUp(position);
+                    Toast.makeText(this, R.string.reorder_hint, Toast.LENGTH_LONG).show();
+                }
+            }
+        });
+
+        // 2. 置顶到首行 Dock / 移出首行 Dock
+        boolean inDock = position < COLUMNS;
+        addSettingsMenuRow(rows, popup, inDock ? R.string.tile_action_unpin_dock : R.string.tile_action_pin_dock, () -> {
+            if (inDock) {
+                int target = Math.min(COLUMNS, adapter.movableCount() - 1);
+                swapIntoDock(position, target);
+            } else {
+                swapIntoDock(0, position);
+            }
+        });
+
+        // 3. 从桌面隐藏
+        addSettingsMenuRow(rows, popup, R.string.tile_action_hide, () -> {
+            hideAppFromHome(entry);
+        });
+
+        // 4. 应用信息 / 卸载
+        addSettingsMenuRow(rows, popup, R.string.library_app_info, () -> {
+            try {
+                Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + entry.pkg));
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(i);
+            } catch (Exception ignored) {
+            }
+        });
+
+        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
+        popup.setWidth(Math.max((int) (220 * density), panel.getMeasuredWidth()));
+        dropIn(popup, panel, card, Gravity.CENTER);
+        if (rows.getChildCount() > 0) rows.getChildAt(0).requestFocus();
+    }
+
+    private void hideAppFromHome(AppAdapter.Entry entry) {
+        if (entry == null || entry.pkg == null) return;
+        LibraryApps.save(this, entry.pkg, false);
+        Toast.makeText(this, getString(R.string.app_hidden_toast, entry.label), Toast.LENGTH_SHORT).show();
+        reloadApps(false);
+    }
 
     @Override
     public void onLibraryRequested() {

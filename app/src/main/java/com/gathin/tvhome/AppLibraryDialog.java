@@ -166,14 +166,18 @@ final class AppLibraryDialog {
                 if (!pkg.equals(activity.getPackageName()) && !unique.containsKey(pkg)) unique.put(pkg, info);
             }
         }
-        totalApps = unique.size();
-        apps = new ArrayList<>(unique.values());
+        List<ResolveInfo> hiddenOnly = new ArrayList<>();
+        for (ResolveInfo info : unique.values()) {
+            if (!onHome.test(info.activityInfo.packageName)) {
+                hiddenOnly.add(info);
+            }
+        }
+        totalApps = hiddenOnly.size();
+        apps = hiddenOnly;
         installTimes.clear();
         labels.clear();
-        Map<String, Boolean> home = new HashMap<>();
         for (ResolveInfo app : apps) {
             String pkg = app.activityInfo.packageName;
-            home.put(pkg, onHome.test(pkg));
             label(app);
             try { installTimes.put(pkg, pm.getPackageInfo(pkg, 0).firstInstallTime); }
             catch (PackageManager.NameNotFoundException | RuntimeException unavailable) { installTimes.put(pkg, 0L); }
@@ -182,9 +186,6 @@ final class AppLibraryDialog {
         Collator collator = Collator.getInstance();
         apps.sort((a, b) -> {
             String pa = a.activityInfo.packageName, pb = b.activityInfo.packageName;
-            int priority = LibraryApps.comparePriority(home.get(pa), installTimes.get(pa),
-                    home.get(pb), installTimes.get(pb), catalogTime);
-            if (priority != 0) return priority;
             int byLabel = collator.compare(label(a), label(b));
             return byLabel != 0 ? byLabel : pa.compareTo(pb);
         });
@@ -217,7 +218,7 @@ final class AppLibraryDialog {
         LinearLayout header = new LinearLayout(activity);
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setPadding(dp(12), dp(4), dp(8), dp(4));
-        TextView title = text(activity.getString(R.string.app_library), 22, Color.WHITE);
+        TextView title = text(activity.getString(R.string.hidden_apps_title), 22, Color.WHITE);
         header.addView(title, new LinearLayout.LayoutParams(0, dp(36), 1));
         title.setGravity(Gravity.CENTER_VERTICAL);
         title.setSingleLine(true);
@@ -227,7 +228,7 @@ final class AppLibraryDialog {
         count.setSingleLine(true);
         header.addView(count, new LinearLayout.LayoutParams(-2, -2));
         panel.addView(header, new LinearLayout.LayoutParams(-1, dp(44)));
-        instructions = text(activity.getString(R.string.library_hint_add), 13, 0xBBFFFFFF);
+        instructions = text(activity.getString(R.string.restore_to_home), 13, 0xBBFFFFFF);
         instructions.setSingleLine(true);
         instructions.setEllipsize(TextUtils.TruncateAt.END);
         instructions.setPadding(dp(12), 0, dp(12), dp(6));
@@ -235,7 +236,7 @@ final class AppLibraryDialog {
         panel.setFocusableInTouchMode(apps.isEmpty());
         if (apps.isEmpty()) {
             instructions.setVisibility(View.GONE);
-            heading(activity.getString(R.string.library_empty));
+            heading(activity.getString(R.string.hidden_apps_empty));
             panel.setFocusableInTouchMode(true);
             panel.requestFocus();
             return;
@@ -365,10 +366,13 @@ final class AppLibraryDialog {
             if (actionPopup == menu) actionPopup = null;
             restoreCardFocus();
         });
+        addAction(rows, R.string.restore_to_home, () -> {
+            changeHome(app, true);
+            Toast.makeText(activity, activity.getString(R.string.restore_toast, label(app)), Toast.LENGTH_SHORT).show();
+            dismissActions();
+            close();
+        });
         addAction(rows, R.string.library_open, () -> open(app));
-        boolean home = onHome.test(pkg);
-        addAction(rows, home ? R.string.library_remove_shortcut : R.string.library_add_home,
-                () -> changeHome(app, !home));
         addAction(rows, R.string.library_app_info, () -> {
             close();
             try {
@@ -492,15 +496,15 @@ final class AppLibraryDialog {
             else check.setBackground(surface(0xFF70D9A0, 8));
             check.setVisibility(home || recent ? View.VISIBLE : View.GONE);
             holder.itemView.setOnClickListener(v -> {
-                if (onHome.test(pkg)) open(app);
-                else changeHome(app, true);
+                changeHome(app, true);
+                Toast.makeText(activity, activity.getString(R.string.restore_toast, label(app)), Toast.LENGTH_SHORT).show();
+                close();
             });
             holder.itemView.setOnLongClickListener(v -> { showActions(app, v); return true; });
             holder.itemView.setOnFocusChangeListener((v, focused) -> {
                 if (focused) {
                     selectedPackage = pkg;
-                    instructions.setText(onHome.test(pkg)
-                            ? R.string.library_hint_open : R.string.library_hint_add);
+                    instructions.setText(R.string.restore_to_home);
                     v.post(() -> { if (v.hasFocus() && catalog != null) highlight(v, true); });
                     int index = holder.getBindingAdapterPosition();
                     if (index != RecyclerView.NO_POSITION) selectedPosition = index;

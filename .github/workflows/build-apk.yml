@@ -10,6 +10,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -46,4 +48,35 @@ jobs:
           name: PureTV-Universal-APK
           path: app/build/outputs/apk/universal/debug/*.apk
           retention-days: 14
+
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: latest
+          name: "Pure TV Launcher 最新版 (全设备专版)"
+          body: |
+            ### 📺 Pure TV Launcher 极简纯净电视桌面
+            
+            专为智能电视与电视盒子打造的轻量纯净桌面，去广告、开机秒启、极简流畅。
+            
+            #### 📦 安装包下载指南（请根据您的设备选择）：
+            - 🔹 **创维专版 (`PureTV-Skyworth-debug.apk`)**：
+              - 适合设备：创维小湃盒子（P3 Pro 等）、创维电视
+              - 核心优化：伪装企鹅极光出厂白名单 `com.ktcp.launcher`，突破系统防替换保护；开机秒启（`directBootAware`）；设置键直达创维原生设置。
+            - 🔹 **小米专版 (`PureTV-Xiaomi-debug.apk`)**：
+              - 适合设备：小米电视 4A 及全系列小米电视/盒子
+              - 核心优化：全面兼容 Android 6.0 (API 21+)，杜绝老电视闪退；设置键直达 MIUI TV 专有设置。
+            - 🔹 **通用标准版 (`PureTV-Universal-debug.apk`)**：
+              - 适合设备：索尼、海信、TCL 或外贸 Google TV 电视/盒子。
+            
+            #### ✨ 核心功能亮点：
+            1. **必应每日 4K 高清壁纸**：开机自动拉取微软高清摄影壁纸，带 45% 动态微暗遮罩，时钟图标清晰可辨。
+            2. **长按图标原地快捷菜单**：移动排序 / 固定到首行程序坞 / 从桌面隐藏 / 应用信息。
+            3. **隐藏应用管理中心**：无用内置软件一键隐藏，随时可一键找回。
+          files: |
+            app/build/outputs/apk/skyworth/debug/*.apk
+            app/build/outputs/apk/xiaomi/debug/*.apk
+            app/build/outputs/apk/universal/debug/*.apk
+
 
