@@ -23,12 +23,27 @@ jobs:
       - name: Make Gradle executable
         run: chmod +x ./gradlew
 
-      - name: Build Debug APK
+      - name: Build All Flavors APK
         run: ./gradlew assembleDebug --stacktrace
 
-      - name: Upload APK Artifact
+      - name: Upload Skyworth APK (创维专版)
         uses: actions/upload-artifact@v4
         with:
-          name: PureTV-Launcher-Debug
-          path: app/build/outputs/apk/debug/*.apk
+          name: PureTV-Skyworth-APK
+          path: app/build/outputs/apk/skyworth/debug/*.apk
           retention-days: 14
+
+      - name: Upload Xiaomi APK (小米专版)
+        uses: actions/upload-artifact@v4
+        with:
+          name: PureTV-Xiaomi-APK
+          path: app/build/outputs/apk/xiaomi/debug/*.apk
+          retention-days: 14
+
+      - name: Upload Universal APK (通用版)
+        uses: actions/upload-artifact@v4
+        with:
+          name: PureTV-Universal-APK
+          path: app/build/outputs/apk/universal/debug/*.apk
+          retention-days: 14
+

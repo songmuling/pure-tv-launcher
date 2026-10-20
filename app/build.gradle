@@ -7,11 +7,35 @@ android {
     compileSdk 34
 
     defaultConfig {
-        applicationId 'com.ktcp.launcher'
         minSdk 21
         targetSdk 34
         versionCode 6
         versionName '2.5'
+    }
+
+    flavorDimensions = ["device"]
+    productFlavors {
+        skyworth {
+            dimension "device"
+            applicationId 'com.ktcp.launcher'
+            versionNameSuffix "-skyworth"
+        }
+        xiaomi {
+            dimension "device"
+            applicationId 'com.puretv.launcher'
+            versionNameSuffix "-xiaomi"
+        }
+        universal {
+            dimension "device"
+            applicationId 'com.gathin.tvhome'
+            versionNameSuffix "-universal"
+        }
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "PureTV-${variant.flavorName.capitalize()}-${variant.buildType.name}.apk"
+        }
     }
 
     buildTypes {
