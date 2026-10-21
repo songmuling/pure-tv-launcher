@@ -363,7 +363,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         ((GridLayoutManager) grid.getLayoutManager()).setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
             @Override public int getSpanSize(int position) { return adapter != null && adapter.isLibraryAt(position) ? COLUMNS : 1; }
         });
-        grid.setHasFixedSize(true);
         grid.setItemAnimator(null);
         // Tiles that scroll out while one is carried come back from the view cache without a rebind; set their
         // dimming again whenever one attaches, so none stays dim after the drop.
