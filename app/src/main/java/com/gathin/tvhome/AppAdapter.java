@@ -319,8 +319,13 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     private int cachedTileW = 0, cachedTileH = 0;
 
     void updateTileDimensions(int innerWidthPx, int parentHeightPx, float density) {
-        cachedTileW = tileWidthPx(innerWidthPx, parentHeightPx, DockManager.DOCK_SIZE, 0, false, true, density);
-        cachedTileH = tileHeightPx(cachedTileW);
+        int newW = tileWidthPx(innerWidthPx, parentHeightPx, DockManager.DOCK_SIZE, 0, false, true, density);
+        int newH = tileHeightPx(newW);
+        if (newW > 0 && (newW != cachedTileW || newH != cachedTileH)) {
+            cachedTileW = newW;
+            cachedTileH = newH;
+            notifyDataSetChanged();
+        }
     }
 
     @NonNull
@@ -342,8 +347,14 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_app, parent, false);
         float density = parent.getResources().getDisplayMetrics().density;
         if (cachedTileW <= 0) {
-            int width = parent.getWidth() > 0 ? parent.getWidth() : parent.getResources().getDisplayMetrics().widthPixels;
-            int inner = width - parent.getPaddingLeft() - parent.getPaddingRight();
+            int width = parent.getWidth();
+            int inner;
+            if (width > 0) {
+                inner = width - parent.getPaddingLeft() - parent.getPaddingRight();
+            } else {
+                int totalPad = Math.round((56 * 2 + 36 * 2) * density);
+                inner = parent.getResources().getDisplayMetrics().widthPixels - totalPad;
+            }
             cachedTileW = tileWidthPx(inner, parent.getHeight(), DockManager.DOCK_SIZE, 0, false, true, density);
             cachedTileH = tileHeightPx(cachedTileW);
         }

@@ -9,8 +9,8 @@ android {
     defaultConfig {
         minSdk 21
         targetSdk 34
-        versionCode 8
-        versionName '2.7'
+        versionCode 9
+        versionName '2.8'
     }
 
     flavorDimensions = ["device"]
