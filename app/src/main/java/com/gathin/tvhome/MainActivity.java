@@ -2105,8 +2105,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         SharedPreferences sp = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
         String mode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_WEATHER);
         if (LauncherSettingsActivity.MODE_WEATHER.equals(mode)) {
-            int resId = WeatherManager.getWallpaperResId(info.condition);
-            wallpaperPlayer.setWallpaperResource(resId, 45);
+            WeatherWallpaper.fetch(this, info.condition, file -> {
+                if (isFinishing() || isDestroyed()) return;
+                wallpaperPlayer.setWallpaper(file, 45);
+            });
             if (weatherParticles != null) {
                 weatherParticles.setWeatherCondition(info.condition);
             }

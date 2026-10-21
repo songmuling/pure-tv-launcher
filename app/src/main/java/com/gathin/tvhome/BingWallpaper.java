@@ -72,33 +72,26 @@ final class BingWallpaper {
                 JSONArray images = json.getJSONArray("images");
                 if (images.length() == 0) return;
 
-                String imgUrlPart = images.getJSONObject(0).getString("url");
-                String fullImgUrl = imgUrlPart.startsWith("http") ? imgUrlPart : "https://cn.bing.com" + imgUrlPart;
-
-                // 2. 下载高清壁纸图片
-                URL imgUrl = new URL(fullImgUrl);
-                HttpURLConnection imgConn = (HttpURLConnection) imgUrl.openConnection();
-                imgConn.setConnectTimeout(10000);
-                imgConn.setReadTimeout(15000);
-                if (imgConn.getResponseCode() != 200) {
-                    imgConn.disconnect();
-                    return;
+                JSONObject imgObj = images.getJSONObject(0);
+                String urlBase = imgObj.optString("urlbase", null);
+                String primaryUrl = null;
+                if (urlBase != null && !urlBase.isEmpty()) {
+                    primaryUrl = (urlBase.startsWith("http") ? urlBase : "https://cn.bing.com" + urlBase) + "_UHD.jpg";
                 }
+                String fallbackUrlPart = imgObj.getString("url");
+                String fallbackUrl = fallbackUrlPart.startsWith("http") ? fallbackUrlPart : "https://cn.bing.com" + fallbackUrlPart;
 
+                // 2. 下载高清壁纸图片（优先 4K 原图，降级 1080P）
                 File tempFile = new File(cacheDir, "downloading.tmp");
-                InputStream is = imgConn.getInputStream();
-                FileOutputStream fos = new FileOutputStream(tempFile);
-                byte[] buffer = new byte[8192];
-                int read;
-                while ((read = is.read(buffer)) != -1) {
-                    fos.write(buffer, 0, read);
+                boolean success = false;
+                if (primaryUrl != null) {
+                    success = downloadToFile(primaryUrl, tempFile);
                 }
-                fos.flush();
-                fos.close();
-                is.close();
-                imgConn.disconnect();
+                if (!success) {
+                    success = downloadToFile(fallbackUrl, tempFile);
+                }
 
-                if (tempFile.length() > 30000) {
+                if (success && tempFile.length() > 30000) {
                     if (targetFile.exists()) targetFile.delete();
                     tempFile.renameTo(targetFile);
 
@@ -116,11 +109,43 @@ final class BingWallpaper {
                         new Handler(Looper.getMainLooper()).post(() -> callback.onReady(targetFile));
                     }
                 } else {
-                    tempFile.delete();
+                    if (tempFile.exists()) tempFile.delete();
                 }
             } catch (Exception e) {
                 Log.w(TAG, "拉取必应壁纸失败: " + e.getMessage());
             }
         }).start();
+    }
+
+    private static boolean downloadToFile(String fileUrl, File target) {
+        HttpURLConnection conn = null;
+        InputStream is = null;
+        FileOutputStream fos = null;
+        try {
+            URL url = new URL(fileUrl);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(15000);
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+            if (conn.getResponseCode() != 200) {
+                return false;
+            }
+            is = conn.getInputStream();
+            fos = new FileOutputStream(target);
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = is.read(buffer)) != -1) {
+                fos.write(buffer, 0, read);
+            }
+            fos.flush();
+            return true;
+        } catch (Exception e) {
+            Log.w(TAG, "下载壁纸失败: " + fileUrl + " -> " + e.getMessage());
+            return false;
+        } finally {
+            try { if (fos != null) fos.close(); } catch (Exception ignored) {}
+            try { if (is != null) is.close(); } catch (Exception ignored) {}
+            if (conn != null) conn.disconnect();
+        }
     }
 }

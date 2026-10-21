@@ -53,8 +53,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: latest
-          name: "Pure TV Launcher 最新版 (全设备专版)"
+          tag_name: v1.0.${{ github.run_number }}
+          name: "Pure TV Launcher v1.0.${{ github.run_number }}"
+          make_latest: true
+          generate_release_notes: true
           body: |
             ### 📺 Pure TV Launcher 极简纯净电视桌面
             
@@ -70,10 +72,13 @@ jobs:
             - 🔹 **通用标准版 (`PureTV-Universal-debug.apk`)**：
               - 适合设备：索尼、海信、TCL 或外贸 Google TV 电视/盒子。
             
-            #### ✨ 核心功能亮点：
-            1. **必应每日 4K 高清壁纸**：开机自动拉取微软高清摄影壁纸，带 45% 动态微暗遮罩，时钟图标清晰可辨。
-            2. **长按图标原地快捷菜单**：移动排序 / 固定到首行程序坞 / 从桌面隐藏 / 应用信息。
-            3. **隐藏应用管理中心**：无用内置软件一键隐藏，随时可一键找回。
+            #### ✨ 本次核心功能与升级：
+            1. **动态天气 4K 高清壁纸 (Bing 官方云端池)**：依据实时天气与昼夜晨昏自动换装微软官方 4K 摄影壁纸，无需大包体积（安装包仅 ~2MB），真 4K 细腻震撼。
+            2. **城市手动指定 / 防翻墙 IP 漂移**：支持全国 30+ 重点城市遥控器一键选择，即使家庭网络开启软路由 VPN / 代理，也不会错误定位到国外。
+            3. **必应每日壁纸 4K UHD 升级**：默认下载官方最高规格 4K 原图（_UHD.jpg），4K 大电视绝对清晰细腻。
+            4. **默认极简主题**：第三种壁纸模式更名为默认极简主题，保留纯正原生渐变质感。
+            5. **长按图标原地快捷菜单**：移动排序 / 置顶到首行程序坞 / 从桌面隐藏。
+            6. **已隐藏应用库**：被隐藏的系统或内置应用可在隐藏应用中心随时找回。
           files: |
             app/build/outputs/apk/skyworth/debug/*.apk
             app/build/outputs/apk/xiaomi/debug/*.apk

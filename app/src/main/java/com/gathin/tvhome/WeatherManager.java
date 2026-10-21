@@ -112,33 +112,37 @@ public final class WeatherManager {
         new Thread(() -> {
             WeatherInfo result = null;
             try {
-                // 1. IP 地理位置检测 (http://ip-api.com/json/?fields=status,city,lat,lon)
-                String city = sp.getString("city", "");
+                // 1. 获取城市经纬度（优先使用用户手动设置的城市，避免翻墙 IP 偏差；否则自动 IP 检测）
+                String customCity = sp.getString("custom_city", "");
+                String city = customCity;
                 double lat = 31.23, lon = 121.47; // 默认备用经纬度 (上海)
-                boolean gotLoc = false;
 
-                try {
-                    URL geoUrl = new URL("http://ip-api.com/json/?fields=status,city,lat,lon");
-                    HttpURLConnection geoConn = (HttpURLConnection) geoUrl.openConnection();
-                    geoConn.setConnectTimeout(4000);
-                    geoConn.setReadTimeout(4000);
-                    if (geoConn.getResponseCode() == 200) {
-                        BufferedReader r = new BufferedReader(new InputStreamReader(geoConn.getInputStream()));
-                        StringBuilder sb = new StringBuilder();
-                        String line;
-                        while ((line = r.readLine()) != null) sb.append(line);
-                        r.close();
-                        JSONObject geoJson = new JSONObject(sb.toString());
-                        if ("success".equalsIgnoreCase(geoJson.optString("status"))) {
-                            city = geoJson.optString("city", city);
-                            lat = geoJson.optDouble("lat", lat);
-                            lon = geoJson.optDouble("lon", lon);
-                            gotLoc = true;
+                if (!customCity.isEmpty()) {
+                    lat = Double.longBitsToDouble(sp.getLong("custom_lat", Double.doubleToLongBits(31.23)));
+                    lon = Double.longBitsToDouble(sp.getLong("custom_lon", Double.doubleToLongBits(121.47)));
+                } else {
+                    try {
+                        URL geoUrl = new URL("http://ip-api.com/json/?fields=status,city,lat,lon");
+                        HttpURLConnection geoConn = (HttpURLConnection) geoUrl.openConnection();
+                        geoConn.setConnectTimeout(4000);
+                        geoConn.setReadTimeout(4000);
+                        if (geoConn.getResponseCode() == 200) {
+                            BufferedReader r = new BufferedReader(new InputStreamReader(geoConn.getInputStream()));
+                            StringBuilder sb = new StringBuilder();
+                            String line;
+                            while ((line = r.readLine()) != null) sb.append(line);
+                            r.close();
+                            JSONObject geoJson = new JSONObject(sb.toString());
+                            if ("success".equalsIgnoreCase(geoJson.optString("status"))) {
+                                city = geoJson.optString("city", city);
+                                lat = geoJson.optDouble("lat", lat);
+                                lon = geoJson.optDouble("lon", lon);
+                            }
                         }
+                        geoConn.disconnect();
+                    } catch (Exception e) {
+                        Log.w(TAG, "IP 定位请求失败: " + e.getMessage());
                     }
-                    geoConn.disconnect();
-                } catch (Exception e) {
-                    Log.w(TAG, "IP 定位请求失败: " + e.getMessage());
                 }
 
                 // 2. Open-Meteo 实时气象查询
@@ -255,25 +259,23 @@ public final class WeatherManager {
         }
     }
 
-    /** 获取对应天气的高清内置壁纸资源 ID */
-    public static int getWallpaperResId(WeatherCondition condition) {
-        if (condition == null) return R.drawable.bg_weather_sunny;
-        switch (condition) {
-            case CLEAR_DAY:
-                return R.drawable.bg_weather_sunny;
-            case CLEAR_SUNSET:
-                return R.drawable.bg_weather_sunset;
-            case CLEAR_NIGHT:
-                return R.drawable.bg_weather_night;
-            case CLOUDY:
-            case FOG:
-                return R.drawable.bg_weather_cloudy;
-            case RAIN:
-                return R.drawable.bg_weather_rain;
-            case SNOW:
-                return R.drawable.bg_weather_snow;
-            default:
-                return R.drawable.bg_weather_sunny;
+    /** 设置自定义城市（空或 "auto" 则为自动 IP 定位） */
+    public static void setCustomCity(Context context, String city, double lat, double lon) {
+        SharedPreferences sp = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        if (city == null || city.isEmpty() || "auto".equalsIgnoreCase(city)) {
+            sp.edit().remove("custom_city").remove("custom_lat").remove("custom_lon").remove("last_update").apply();
+        } else {
+            sp.edit().putString("custom_city", city)
+                    .putLong("custom_lat", Double.doubleToLongBits(lat))
+                    .putLong("custom_lon", Double.doubleToLongBits(lon))
+                    .remove("last_update")
+                    .apply();
         }
+        cachedInfo = null;
+    }
+
+    /** 获取当前设定的城市名称（为空则代表自动定位） */
+    public static String getCustomCity(Context context) {
+        return context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE).getString("custom_city", "");
     }
 }

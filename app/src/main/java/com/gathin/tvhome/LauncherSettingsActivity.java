@@ -23,6 +23,7 @@ public final class LauncherSettingsActivity extends Activity {
     private TextView advancedChoice;
     private TextView wallpaperModeChoice;
     private TextView weatherParticlesChoice;
+    private TextView weatherCityChoice;
     private TextView followThemeChoice;
     private int columns;
     private boolean animations;
@@ -115,11 +116,15 @@ public final class LauncherSettingsActivity extends Activity {
             refresh();
         });
 
+        weatherCityChoice = findViewById(R.id.weatherCityChoice);
+        weatherCityChoice.setOnClickListener(v -> showCityDialog());
+
         followThemeChoice = findViewById(R.id.followThemeChoice);
         followThemeChoice.setOnClickListener(v -> {
             if (!hasOnTvChoices()) return;
             choices.edit().remove("columns").remove("animations").remove("advanced_effects")
                     .remove("bing_wallpaper").remove("wallpaper_mode").remove("weather_particles").commit();
+            WeatherManager.setCustomCity(this, null, 0, 0);
             Config current = Config.load(this);
             columns = current.columns;
             animations = current.animations;
@@ -137,6 +142,36 @@ public final class LauncherSettingsActivity extends Activity {
                 open(new Intent(Settings.ACTION_SETTINGS)));
         refresh();
         columnChoices[Math.max(0, Math.min(columns - 4, 3))].requestFocus();
+    }
+
+    private void showCityDialog() {
+        String currentCity = WeatherManager.getCustomCity(this);
+        WeatherCityPresets.City[] cities = WeatherCityPresets.PRESET_CITIES;
+        CharSequence[] items = new CharSequence[cities.length + 1];
+        items[0] = getString(R.string.weather_city_auto);
+        int checkedIndex = 0;
+        for (int i = 0; i < cities.length; i++) {
+            items[i + 1] = cities[i].name;
+            if (cities[i].name.equals(currentCity)) {
+                checkedIndex = i + 1;
+            }
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.weather_city_dialog_title)
+                .setSingleChoiceItems(items, checkedIndex, (dialog, which) -> {
+                    if (which == 0) {
+                        WeatherManager.setCustomCity(LauncherSettingsActivity.this, null, 0, 0);
+                    } else {
+                        WeatherCityPresets.City selected = cities[which - 1];
+                        WeatherManager.setCustomCity(LauncherSettingsActivity.this, selected.name, selected.lat, selected.lon);
+                    }
+                    setResult(RESULT_OK);
+                    refresh();
+                    dialog.dismiss();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private void setAdvanced(boolean enabled) {
@@ -168,13 +203,19 @@ public final class LauncherSettingsActivity extends Activity {
         wallpaperModeChoice.setText(getString(R.string.wallpaper_mode_label, modeName));
         weatherParticlesChoice.setText(getString(R.string.weather_particles_label,
                 getString(weatherParticles ? R.string.on : R.string.off)));
+
+        String currentCity = WeatherManager.getCustomCity(this);
+        String cityDisplay = currentCity.isEmpty() ? getString(R.string.weather_city_auto) : currentCity;
+        weatherCityChoice.setText(getString(R.string.weather_city_label, cityDisplay));
+
         followThemeChoice.setSelected(!hasOnTvChoices());
     }
 
     private boolean hasOnTvChoices() {
         return choices.contains("columns") || choices.contains("animations")
                 || choices.contains("advanced_effects") || choices.contains("bing_wallpaper")
-                || choices.contains("wallpaper_mode") || choices.contains("weather_particles");
+                || choices.contains("wallpaper_mode") || choices.contains("weather_particles")
+                || !WeatherManager.getCustomCity(this).isEmpty();
     }
 
     private void open(Intent intent) {

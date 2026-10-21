@@ -105,6 +105,9 @@
     <string name="wallpaper_mode_label">Wallpaper: %1$s</string>
     <string name="wallpaper_mode_weather">Weather Dynamic</string>
     <string name="wallpaper_mode_bing">Bing Daily</string>
-    <string name="wallpaper_mode_off">Off (Pure Black)</string>
+    <string name="wallpaper_mode_off">Default Minimalist Theme</string>
     <string name="weather_particles_label">Weather Particles (Rain/Snow/Stars): %1$s</string>
+    <string name="weather_city_label">Weather City: %1$s</string>
+    <string name="weather_city_auto">Auto Detect (IP)</string>
+    <string name="weather_city_dialog_title">Select Weather City</string>
 </resources>

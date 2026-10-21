@@ -73,6 +73,9 @@
     <string name="wallpaper_mode_label">壁纸模式：%1$s</string>
     <string name="wallpaper_mode_weather">动态天气风景</string>
     <string name="wallpaper_mode_bing">必应每日高清</string>
-    <string name="wallpaper_mode_off">关闭 (纯黑省电)</string>
+    <string name="wallpaper_mode_off">默认极简主题</string>
     <string name="weather_particles_label">动态天气微粒子 (雨/雪/星芒)：%1$s</string>
+    <string name="weather_city_label">天气城市：%1$s</string>
+    <string name="weather_city_auto">自动定位 (基于IP)</string>
+    <string name="weather_city_dialog_title">选择天气所在城市</string>
 </resources>
