@@ -1089,8 +1089,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 Toast.makeText(this, R.string.dock_removed_toast, Toast.LENGTH_SHORT).show();
             } else {
                 AllAppsDialog.AppItem chosen = apps.get(which - 1);
-                DockManager.setSlot(this, slotIndex, chosen.component.flattenToShortString());
-                Toast.makeText(this, getString(R.string.dock_set_toast, chosen.label), Toast.LENGTH_SHORT).show();
+                String currentInTarget = DockManager.getSlot(this, slotIndex);
+                int swappedSlot = DockManager.assignSlot(this, slotIndex, chosen.component.flattenToShortString());
+                if (swappedSlot != -1) {
+                    if (currentInTarget == null || currentInTarget.isEmpty()) {
+                        Toast.makeText(this, getString(R.string.dock_moved_toast, chosen.label), Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(this, getString(R.string.dock_swapped_toast, swappedSlot + 1), Toast.LENGTH_SHORT).show();
+                    }
+                } else {
+                    Toast.makeText(this, getString(R.string.dock_set_toast, chosen.label), Toast.LENGTH_SHORT).show();
+                }
             }
             reloadApps(false);
             refocusAfterLayout(slotIndex);
