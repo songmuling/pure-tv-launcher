@@ -290,13 +290,4 @@
             android:clickable="true"
             android:nextFocusUp="@+id/grid" />
     </LinearLayout>
-
-    <!-- The single floating glass highlight that springs between tiles (disabled in favor of tile integrated focus border). -->
-    <com.gathin.tvhome.GlassView
-        android:id="@+id/glass"
-        android:layout_width="10dp"
-        android:layout_height="10dp"
-        android:visibility="gone"
-        android:alpha="0"
-        android:importantForAccessibility="no" />
 </FrameLayout>

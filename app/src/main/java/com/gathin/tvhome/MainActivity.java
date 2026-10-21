@@ -112,7 +112,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private FrameLayout root;
     private WallpaperPlayer wallpaperPlayer;
     private TextView weatherInfo;
-    private GlassView glass;
     private View ambient;
     private TextView heroName;
     private int ambientColor = -1;
@@ -133,12 +132,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** Optional time-of-day backdrop (config.xml, sky_intensity); 0 keeps it hidden. */
     private SkyView sky;
     private String vpnApp;
-    private SpringAnimation springX, springY;
-    private float glassTargetX, glassTargetY;
-    // How far the grid has scrolled the glass. springY works without it, in grid content space, so a
-    // scroll moves the glass in lockstep with its tile instead of becoming a moving spring target.
-    private float glassScrollShift;
-    private boolean glassShown;
     // Static so they survive the activity being destroyed while another app is open (low-memory TVs,
     // or Developer options → "Don't keep activities"); they only reset when the process dies.
     private static int lastFocused = 0;
@@ -286,8 +279,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         updateWeatherAndWallpaper();
         sky = findViewById(R.id.sky);
         sky.setIntensity(cfg.skyIntensity);
-        glass = findViewById(R.id.glass);
-        if (glass != null) glass.setVisibility(View.GONE);
         ambient = findViewById(R.id.ambient);
         if (ambient != null) ambient.setVisibility(View.GONE);
         // The glow is one bitmap, so its alpha can be applied while drawing it. Otherwise every frame of
@@ -393,42 +384,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             int inner = (r - l) - grid.getPaddingLeft() - grid.getPaddingRight();
             adapter.updateTileDimensions(inner, h, density);
         });
-
-        // Keep the glass glued to its tile while the grid scrolls.
-        grid.addOnScrollListener(new RecyclerView.OnScrollListener() {
-            @Override
-            public void onScrolled(@NonNull RecyclerView rv, int dx, int dy) {
-                if (!glassShown) return;
-                glassTargetY -= dy;
-                glassScrollShift -= dy;
-                glass.setTranslationY(glass.getTranslationY() - dy);
-            }
-        });
-
-        // Liquid feel: soft springs on the highlight's position.
-        springX = new SpringAnimation(glass, DynamicAnimation.TRANSLATION_X);
-        springY = new SpringAnimation(glass, new FloatPropertyCompat<View>("glassContentY") {
-            @Override
-            public float getValue(View v) {
-                return v.getTranslationY() - glassScrollShift;
-            }
-
-            @Override
-            public void setValue(View v, float value) {
-                v.setTranslationY(value + glassScrollShift);
-            }
-        });
-        for (SpringAnimation s : new SpringAnimation[]{springX, springY}) {
-            if (reducedMotion) {
-                // Stiff and almost critically damped: settles in a few frames instead of oscillating,
-                // and stops once the highlight is within 1.5 px of its tile.
-                s.setSpring(new SpringForce().setStiffness(1400f).setDampingRatio(0.95f));
-                s.setMinimumVisibleChange(1.5f);
-            } else {
-                s.setSpring(new SpringForce().setStiffness(advancedEffects ? 320f : 260f)
-                        .setDampingRatio(advancedEffects ? 0.76f : 0.58f));
-            }
-        }
 
         btnInputs = findViewById(R.id.btnInputs);
         View btnSettings = findViewById(R.id.btnSettings);
@@ -611,8 +566,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         final int returnSlot = lastFocused;
         final boolean restoreFocus = appLibrary == null && (animate || grid.hasFocus());
         if (restoreFocus) {
-            glassShown = false;
-            glass.setAlpha(0f);
             heroShown = false;
             heroName.setAlpha(0f);
             ambient.setAlpha(0f);
@@ -810,7 +763,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (adapter.hasEmptySlots()) reloadTiles();   // every position must hold a tile that can move
         reordering = true;
         orderAtStart = adapter.movableKeys();
-        glass.setAccent(REORDER_ACCENT);
         btnReorder.setActivated(true);
         return true;
     }
@@ -919,7 +871,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         drop();
         reordering = false;
         adapter.setReordering(false);
-        glass.setAccent(festive ? festival.accentColor() : 0);
         btnReorder.setActivated(false);
         List<String> keys = adapter.movableKeys();
         List<String> before = orderAtStart;
@@ -1112,15 +1063,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private void setDesktopForegroundVisible(boolean visible) {
         View foreground = findViewById(R.id.desktopForeground);
-        View glass = findViewById(R.id.glass);
         if (foreground != null) {
             foreground.setVisibility(visible ? View.VISIBLE : View.INVISIBLE);
         }
         if (heroName != null && heroName.getVisibility() != View.GONE) {
             heroName.setVisibility(visible ? View.VISIBLE : View.INVISIBLE);
-        }
-        if (glass != null) {
-            glass.setVisibility(visible ? View.VISIBLE : View.INVISIBLE);
         }
     }
 
@@ -1157,46 +1104,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     public void onTileFocused(int position, View card) {
         lastFocused = position;
         lastFocusedKey = adapter.keyAt(position);
-        // Tile rect in root coordinates, using layout positions (ignores the scale animation).
-        Rect r = new Rect(0, 0, card.getWidth(), card.getHeight());
-        root.offsetDescendantRectToMyCoords(card, r);
-        float pad = 6f * density;        // matches GlassView's glow inset
-        float scale = adapter.focusScale();
-        float w = card.getWidth() * scale + 2 * pad;
-        float h = card.getHeight() * scale + 2 * pad;
-        float x = r.exactCenterX() - w / 2f;
-        float y = r.exactCenterY() - h / 2f - (advancedEffects ? 4f * density : 0f);
-
-        ViewGroup.LayoutParams lp = glass.getLayoutParams();
-        if (lp.width != (int) w || lp.height != (int) h) {
-            lp.width = (int) w;
-            lp.height = (int) h;
-            glass.setLayoutParams(lp);
-            // GlassView draws its slab inset by pad, i.e. exactly over the zoomed tile: same corners as the tile.
-            glass.setRadius(AppAdapter.cornerRadius(card.getWidth(), density) * scale);
-        }
-        glassTargetX = x;
-        glassTargetY = y;
-        if (!glassShown) {
-            springX.cancel();
-            springY.cancel();
-            glass.setTranslationX(x);
-            glass.setTranslationY(y);
-            if (animations) glass.animate().alpha(1f).setDuration(reducedMotion ? 100 : 180).start();
-            else glass.setAlpha(1f);
-            glassShown = true;
-        } else if (!animations) {
-            springX.cancel();
-            springY.cancel();
-            glass.setTranslationX(x);
-            glass.setTranslationY(y);
-        } else {
-            springX.animateToFinalPosition(x);
-            springY.animateToFinalPosition(y - glassScrollShift);
-        }
         View item = (View) card.getParent();
         if (dockRow && position < COLUMNS) {
             // Dock: park it at the bottom of the screen and show the top shelf for this app.
+            Rect r = new Rect(0, 0, card.getWidth(), card.getHeight());
+            root.offsetDescendantRectToMyCoords(card, r);
             int decoratedTop = item.getTop() - (int) (6 * density);
             int dy = decoratedTop - grid.getPaddingTop();
             // A 1px mismatch used to start a scroll on every dock move. Only scroll when the row is
@@ -1211,8 +1123,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             // A plain grid (dock_row false) has no dock to carry the glow, so it follows every tile there.
             if (dockRow) hideHero();
             else showGlowOnly(position);
-            // Scroll just enough so the whole glass (not only the tile) is visible.
-            Rect want = new Rect(0, -(int) pad * 2, item.getWidth(), item.getHeight() + (int) pad);
+            // Scroll just enough so the whole tile is visible.
+            Rect want = new Rect(0, -(int) (12 * density), item.getWidth(), item.getHeight() + (int) (6 * density));
             grid.requestChildRectangleOnScreen(item, want, reducedMotion);
         }
     }
@@ -1354,11 +1266,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void hideGlass() {
-        if (!glassShown) return;
-        glassShown = false;
-        glass.animate().cancel();
-        if (animations) glass.animate().alpha(0f).setDuration(160).start();
-        else glass.setAlpha(0f);
     }
 
     // ---- optional system stats (config.xml show_stats) --------------------------------------------
@@ -1550,7 +1457,25 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     rtlAppGrid, keyCode == KeyEvent.KEYCODE_DPAD_LEFT);
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
-            if (position < COLUMNS) return false;          // dock row: let focus move to the top bar
+            if (position < COLUMNS) {
+                View target;
+                if (position >= 5) {
+                    target = findViewById(R.id.btnSettings);
+                    if (target == null || target.getVisibility() != View.VISIBLE) {
+                        target = btnWifi;
+                    }
+                } else {
+                    target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs : btnWifi;
+                    if (target == null || target.getVisibility() != View.VISIBLE) {
+                        target = findViewById(R.id.btnSettings);
+                    }
+                }
+                if (target != null && target.requestFocus()) {
+                    grid.playSoundEffect(SoundEffectConstants.NAVIGATION_UP);
+                    return true;
+                }
+                return true;
+            }
             focusTile(position - COLUMNS);
             grid.playSoundEffect(SoundEffectConstants.NAVIGATION_UP);
             return true;

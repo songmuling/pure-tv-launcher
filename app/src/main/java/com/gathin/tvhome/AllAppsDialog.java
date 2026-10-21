@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.graphics.Color;
+import android.graphics.Outline;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
@@ -16,6 +17,7 @@ import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewOutlineProvider;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
@@ -275,6 +277,15 @@ final class AllAppsDialog extends Dialog {
             icon = itemView.findViewById(R.id.icon);
             label = itemView.findViewById(R.id.label);
             name = itemView.findViewById(R.id.name);
+
+            final float density = itemView.getResources().getDisplayMetrics().density;
+            card.setOutlineProvider(new ViewOutlineProvider() {
+                @Override
+                public void getOutline(View v, Outline outline) {
+                    outline.setRoundRect(0, 0, v.getWidth(), v.getHeight(), 16f * density);
+                }
+            });
+            card.setClipToOutline(true);
 
             card.setFocusable(true);
             card.setOnFocusChangeListener((v, hasFocus) -> {
