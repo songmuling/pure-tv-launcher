@@ -57,7 +57,12 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
+import android.app.AlertDialog;
+import android.widget.ArrayAdapter;
 import android.widget.Toast;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.util.TypedValue;
 
 import androidx.annotation.NonNull;
 import androidx.dynamicanimation.animation.DynamicAnimation;
@@ -69,13 +74,16 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.Collator;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -83,11 +91,13 @@ import java.util.Set;
  */
 public class MainActivity extends Activity implements AppAdapter.TileListener {
 
+    private View btnAllApps;
+
     private static final int LAUNCHER_SETTINGS_REQUEST = 42;
     /** Sent by QuickSettingsActivity: open Launcher settings from here so Home rebuilds when they close. */
     static final String ACTION_LAUNCHER_SETTINGS = "com.gathin.tvhome.action.LAUNCHER_SETTINGS";
     /** Tiles per row and dock slots (res/values/config.xml, columns). Set in onCreate. */
-    static int COLUMNS = 4;
+    static int COLUMNS = 6;
     private boolean rtlAppGrid;
     private static final long MINUTE_MS = 60_000L;
     private static final long STATS_MS = 10_000L;
@@ -254,7 +264,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         Config cfg = Config.load(this);
         settingsKeycodes = cfg.settingsKeycodes;
         settingsKeyPanel = cfg.settingsKeyPanel;
-        COLUMNS = cfg.columns;
+        COLUMNS = DockManager.DOCK_SIZE;
         animations = cfg.animations;
         advancedEffects = cfg.animations && cfg.advancedEffects;
         reducedMotion = cfg.reducedMotion;
@@ -374,26 +384,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         adapter.setSavedOrder(Order.ranks(Order.load(Order.file(this)), dockApps));
         grid.setAdapter(adapter);
 
-        // tvOS layout: push the dock row towards the bottom of the screen, leaving room for
-        // rows_below_dock grid rows under it; the rest of the grid stays below until you press Down.
-        int rowsBelowDock = cfg.rowsBelowDock;
         grid.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
             int h = b - t;
-            // Item height follows the tile size, which follows the columns and the rows that must fit (AppAdapter.tileWidthPx).
             int inner = (r - l) - grid.getPaddingLeft() - grid.getPaddingRight();
-            int tileW = AppAdapter.tileWidthPx(inner, h, COLUMNS, rowsBelowDock, cfg.dockTitle, cfg.dockRow, density);
+            adapter.updateTileDimensions(inner, h, density);
+            int tileW = AppAdapter.tileWidthPx(inner, h, COLUMNS, 0, false, true, density);
             int itemH = AppAdapter.itemHeightPx(AppAdapter.tileHeightPx(tileW), density);
-            int dockRow = itemH + (int) (AppAdapter.DOCK_EXTRA_DP * density);   // item height plus DockDecoration offsets
-            int gridRows = itemH * rowsBelowDock;
-            // Keep the hero below the header when the library is enabled on a short screen,
-            // even when the theme requests an extra visible row below the dock.
-            int shelfClearance = cfg.appLibrary ? heroName.getMeasuredHeight() + (int) (40 * density) : 0;
-            int want = Math.max(shelfClearance, h - dockRow - gridRows - (int) (AppAdapter.BOTTOM_ROOM_DP * density));
-            // Where the rows cannot fit even at the smallest tile (3 rows with the title on), the title keeps its
-            // room above the dock and the last rows run off the bottom instead of the title drawing over the clock.
-            if (MainActivity.this.dockRow && cfg.dockTitle && rowsBelowDock > 0) want = Math.max(want, (int) (AppAdapter.TITLE_ROOM_DP * density));
-            // No dock to push down: the grid starts at the top, with room for the first row's zoom and glass.
-            if (!MainActivity.this.dockRow) want = (int) (AppAdapter.TOP_ROOM_DP * density);
+            int dockRow = itemH + (int) (AppAdapter.DOCK_EXTRA_DP * density);
+            int shelfClearance = heroName.getMeasuredHeight() + (int) (30 * density);
+            int want = Math.max(shelfClearance, h - dockRow - (int) (64 * density));
             if (grid.getPaddingTop() != want) {
                 grid.setPadding(grid.getPaddingLeft(), want, grid.getPaddingRight(), grid.getPaddingBottom());
             }
@@ -444,13 +443,33 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             return true;
         });
         btnSettings.setOnClickListener(v -> open(systemIntent(Settings.ACTION_SETTINGS)));
-        btnReorder = findViewById(R.id.btnReorder);
-        btnReorder.setOnClickListener(v -> toggleReorder());
-        btnReorder.setVisibility(cfg.reorderButton ? View.VISIBLE : View.GONE);
         btnSettings.setOnLongClickListener(v -> {
             showSettingsMenu();
             return true;
         });
+        btnReorder = findViewById(R.id.btnReorder);
+        btnReorder.setOnClickListener(v -> toggleReorder());
+        btnReorder.setVisibility(View.GONE);
+        btnAllApps = findViewById(R.id.btnAllApps);
+        if (btnAllApps != null) {
+            btnAllApps.setOnClickListener(v -> showAllApps());
+            btnAllApps.setOnKeyListener((v, keyCode, event) -> {
+                if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+                if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
+                    focusTile(Math.min(lastFocused % COLUMNS, COLUMNS - 1));
+                    return true;
+                }
+                if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+                    return true;
+                }
+                return false;
+            });
+            if (advancedEffects) {
+                btnAllApps.setOnFocusChangeListener((view, focused) -> view.animate()
+                        .scaleX(focused ? 1.06f : 1f).scaleY(focused ? 1.06f : 1f)
+                        .setDuration(160).start());
+            }
+        }
 
         // Keep focus on the top bar at its ends and at the top: Android's focus finder would otherwise
         // jump to a tile far below when there is nothing in that direction.
@@ -982,65 +1001,111 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     @Override
-    public void onTileLongClick(int position, View card, AppAdapter.Entry entry) {
-        if (entry == null || entry.pkg == null || reordering) return;
-        showTileActionMenu(position, card, entry);
+    public void onTileClick(int position, View card, AppAdapter.Entry entry) {
+        if (entry != null && entry.kind == AppAdapter.Entry.EMPTY) {
+            showDockAppPicker(position);
+        }
     }
 
-    private void showTileActionMenu(int position, View card, AppAdapter.Entry entry) {
-        if (openPopup != null) openPopup.dismiss();
-        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
-        LinearLayout rows = panel.findViewById(R.id.rows);
-        PopupWindow popup = glassPopup(panel, (int) (220 * density));
+    @Override
+    public void onTileLongClick(int position, View card, AppAdapter.Entry entry) {
+        if (position < 0 || position >= COLUMNS) return;
+        showDockAppPicker(position);
+    }
 
-        // 1. 移动排序 (所见即所得：直接拿起磁贴开始移动)
-        addSettingsMenuRow(rows, popup, R.string.tile_action_move, () -> {
-            if (!reordering) {
-                if (beginReorder()) {
-                    focusTile(position);
-                    pickUp(position);
-                    Toast.makeText(this, R.string.reorder_hint, Toast.LENGTH_LONG).show();
+    private void showDockAppPicker(int slotIndex) {
+        if (openPopup != null) openPopup.dismiss();
+        PackageManager pm = getPackageManager();
+        Intent tvIntent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER);
+        List<ResolveInfo> tvFound = pm.queryIntentActivities(tvIntent, 0);
+        Map<String, ResolveInfo> map = new LinkedHashMap<>();
+        for (ResolveInfo ri : tvFound) {
+            if (ri.activityInfo != null && !ri.activityInfo.packageName.equals(getPackageName())) {
+                map.put(ri.activityInfo.packageName, ri);
+            }
+        }
+        Intent mainIntent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER);
+        List<ResolveInfo> launcherFound = pm.queryIntentActivities(mainIntent, 0);
+        for (ResolveInfo ri : launcherFound) {
+            if (ri.activityInfo != null && !ri.activityInfo.packageName.equals(getPackageName())) {
+                if (!map.containsKey(ri.activityInfo.packageName)) {
+                    map.put(ri.activityInfo.packageName, ri);
                 }
             }
-        });
+        }
 
-        // 2. 置顶到首行 Dock / 移出首行 Dock
-        boolean inDock = position < COLUMNS;
-        addSettingsMenuRow(rows, popup, inDock ? R.string.tile_action_unpin_dock : R.string.tile_action_pin_dock, () -> {
-            if (inDock) {
-                int target = Math.min(COLUMNS, adapter.movableCount() - 1);
-                swapIntoDock(position, target);
+        List<AllAppsDialog.AppItem> apps = new ArrayList<>();
+        for (ResolveInfo ri : map.values()) {
+            String pkg = ri.activityInfo.packageName;
+            String label = Cards.cleanLabel(String.valueOf(ri.loadLabel(pm)), pkg);
+            Drawable icon = ri.loadIcon(pm);
+            ComponentName cn = new ComponentName(pkg, ri.activityInfo.name);
+            apps.add(new AllAppsDialog.AppItem(label, cn, null, icon, pkg));
+        }
+        Collator collator = Collator.getInstance();
+        apps.sort((a, b) -> collator.compare(a.label, b.label));
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert);
+        builder.setTitle(getString(R.string.dock_slot_title, slotIndex + 1));
+
+        String[] labels = new String[apps.size() + 1];
+        labels[0] = getString(R.string.dock_remove_app);
+        for (int i = 0; i < apps.size(); i++) {
+            labels[i + 1] = apps.get(i).label;
+        }
+
+        ArrayAdapter<String> listAdapter = new ArrayAdapter<String>(this, android.R.layout.select_dialog_item, android.R.id.text1, labels) {
+            @NonNull
+            @Override
+            public View getView(int position, View convertView, @NonNull ViewGroup parent) {
+                View v = super.getView(position, convertView, parent);
+                TextView tv = v.findViewById(android.R.id.text1);
+                tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+                int iconSize = (int) (32 * density);
+                if (position == 0) {
+                    tv.setTextColor(0xFFFF6B6B);
+                    Drawable trash = getDrawable(android.R.drawable.ic_menu_delete);
+                    if (trash != null) {
+                        trash.setBounds(0, 0, iconSize, iconSize);
+                        tv.setCompoundDrawables(trash, null, null, null);
+                        tv.setCompoundDrawablePadding((int) (14 * density));
+                    }
+                } else {
+                    tv.setTextColor(0xFFFFFFFF);
+                    Drawable icon = apps.get(position - 1).icon;
+                    if (icon != null) {
+                        icon.setBounds(0, 0, iconSize, iconSize);
+                        tv.setCompoundDrawables(icon, null, null, null);
+                        tv.setCompoundDrawablePadding((int) (14 * density));
+                    }
+                }
+                return v;
+            }
+        };
+
+        builder.setAdapter(listAdapter, (dialog, which) -> {
+            if (which == 0) {
+                DockManager.setSlot(this, slotIndex, "");
+                Toast.makeText(this, R.string.dock_removed_toast, Toast.LENGTH_SHORT).show();
             } else {
-                swapIntoDock(0, position);
+                AllAppsDialog.AppItem chosen = apps.get(which - 1);
+                DockManager.setSlot(this, slotIndex, chosen.component.flattenToShortString());
+                Toast.makeText(this, getString(R.string.dock_set_toast, chosen.label), Toast.LENGTH_SHORT).show();
             }
+            reloadApps(false);
+            refocusAfterLayout(slotIndex);
         });
 
-        // 3. 从桌面隐藏
-        addSettingsMenuRow(rows, popup, R.string.tile_action_hide, () -> {
-            hideAppFromHome(entry);
-        });
-
-        // 4. 应用信息 / 卸载
-        addSettingsMenuRow(rows, popup, R.string.library_app_info, () -> {
-            try {
-                Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + entry.pkg));
-                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(i);
-            } catch (Exception ignored) {
-            }
-        });
-
-        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-        popup.setWidth(Math.max((int) (220 * density), panel.getMeasuredWidth()));
-        dropIn(popup, panel, card, Gravity.CENTER);
-        if (rows.getChildCount() > 0) rows.getChildAt(0).requestFocus();
+        builder.setNegativeButton(android.R.string.cancel, null);
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
 
-    private void hideAppFromHome(AppAdapter.Entry entry) {
-        if (entry == null || entry.pkg == null) return;
-        LibraryApps.save(this, entry.pkg, false);
-        Toast.makeText(this, getString(R.string.app_hidden_toast, entry.label), Toast.LENGTH_SHORT).show();
-        reloadApps(false);
+    private void showAllApps() {
+        AllAppsDialog dialog = new AllAppsDialog(this, animations, () -> {
+            if (btnAllApps != null) btnAllApps.requestFocus();
+        });
+        dialog.show();
     }
 
     @Override
@@ -1128,6 +1193,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private void showHero(int position, float dockTopInRoot) {
         String label = adapter.labelAt(position);
+        if (label == null || label.isEmpty()) {
+            hideHero();
+            return;
+        }
         int color = adapter.ambientColorAt(position);
         float y = dockTopInRoot - 14 * density - 26 * density - heroName.getHeight();
         boolean changed = !label.contentEquals(heroName.getText());
@@ -1472,36 +1541,23 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     public boolean onTileVerticalKey(int position, int keyCode) {
         int count = adapter.appCount();
-        int target;
-        // Horizontal: swallow the key at a row's ends so focus never wraps to the next row or
-        // escapes up into the top bar. Mid-row moves fall through to the default focus search.
         if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT || keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-            boolean forward = rtlAppGrid ? keyCode == KeyEvent.KEYCODE_DPAD_LEFT : keyCode == KeyEvent.KEYCODE_DPAD_RIGHT;
-            if (forward && position == adapter.focusablePosition(count - 1) && adapter.isLibraryAt(count)) {
-                focusLibrary();
-                return true;
-            }
-            // In the dock, the last app is the row's end: the empty slots after it take no focus.
-            int rowCount = position < COLUMNS ? Math.min(count, adapter.dockFilled()) : count;
-            return GridNavigation.atHorizontalEdge(position, rowCount, COLUMNS,
+            return GridNavigation.atHorizontalEdge(position, count, COLUMNS,
                     rtlAppGrid, keyCode == KeyEvent.KEYCODE_DPAD_LEFT);
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
             if (position < COLUMNS) return false;          // dock row: let focus move to the top bar
-            target = position - COLUMNS;
+            focusTile(position - COLUMNS);
+            grid.playSoundEffect(SoundEffectConstants.NAVIGATION_UP);
+            return true;
         } else {
-            int lastRowStart = ((count - 1) / COLUMNS) * COLUMNS;
-            if (position >= lastRowStart) {
-                if (adapter.isLibraryAt(count)) focusLibrary();
+            if (btnAllApps != null && btnAllApps.getVisibility() == View.VISIBLE) {
+                btnAllApps.requestFocus();
+                grid.playSoundEffect(SoundEffectConstants.NAVIGATION_DOWN);
                 return true;
             }
-            target = Math.min(position + COLUMNS, count - 1);
+            return true;
         }
-        focusTile(target);
-        // The default focus search clicks for Left/Right; Up/Down are handled here, so click for them too.
-        grid.playSoundEffect(keyCode == KeyEvent.KEYCODE_DPAD_UP
-                ? SoundEffectConstants.NAVIGATION_UP : SoundEffectConstants.NAVIGATION_DOWN);
-        return true;
     }
 
     @Override public void onLibraryFocused() {
@@ -2042,8 +2098,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             updateWeatherAndWallpaper();
         });
         if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
-        if (dockRow) addSettingsMenuRow(rows, popup, R.string.dock_edit, this::startDockEdit);
-        addSettingsMenuRow(rows, popup, R.string.reorder, this::toggleReorder);
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));
         // Hebrew puts Settings at the left of the header: grow the menu inward from it.

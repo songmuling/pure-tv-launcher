@@ -78,4 +78,10 @@
     <string name="weather_city_label">天气城市：%1$s</string>
     <string name="weather_city_auto">自动定位 (基于IP)</string>
     <string name="weather_city_dialog_title">选择天气所在城市</string>
+    <string name="all_apps">全部应用</string>
+    <string name="all_apps_count_hint">共 %1$d 个应用 · 按返回键收起</string>
+    <string name="dock_slot_title">设置常用应用 (槽位 %1$d)</string>
+    <string name="dock_remove_app">【 移除此应用 (恢复为 + 号) 】</string>
+    <string name="dock_removed_toast">已将该槽位恢复为 + 号</string>
+    <string name="dock_set_toast">已将“%1$s”固定到该槽位</string>
 </resources>

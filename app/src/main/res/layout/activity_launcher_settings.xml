@@ -27,13 +27,15 @@
             android:layout_marginTop="28dp"
             android:text="@string/columns_label"
             android:textColor="#FFFFFFFF"
-            android:textSize="20sp" />
+            android:textSize="20sp"
+            android:visibility="gone" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:visibility="gone">
 
             <TextView android:id="@+id/columns4" style="@style/SettingsColumnChoice" android:text="4" />
             <TextView android:id="@+id/columns5" style="@style/SettingsColumnChoice" android:text="5" />

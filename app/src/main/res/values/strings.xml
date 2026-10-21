@@ -110,4 +110,10 @@
     <string name="weather_city_label">Weather City: %1$s</string>
     <string name="weather_city_auto">Auto Detect (IP)</string>
     <string name="weather_city_dialog_title">Select Weather City</string>
+    <string name="all_apps">All Apps</string>
+    <string name="all_apps_count_hint">%1$d apps · Press Back to close</string>
+    <string name="dock_slot_title">Set Dock App (Slot %1$d)</string>
+    <string name="dock_remove_app">【 Remove App (Reset to +) 】</string>
+    <string name="dock_removed_toast">Slot reset to +</string>
+    <string name="dock_set_toast">\"%1$s\" set to Dock</string>
 </resources>

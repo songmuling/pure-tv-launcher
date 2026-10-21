@@ -238,6 +238,7 @@
                     style="@style/TopButtonIcon"
                     android:contentDescription="@string/reorder"
                     android:drawableStart="@drawable/ic_swap_vert"
+                    android:visibility="gone"
                     android:nextFocusDown="@+id/grid" />
 
                 <TextView
@@ -268,6 +269,23 @@
                 android:scrollbars="none"
                 android:descendantFocusability="afterDescendants" />
         </FrameLayout>
+
+        <!-- Apple TV 质感居中毛玻璃“全部应用”入口 -->
+        <TextView
+            android:id="@+id/btnAllApps"
+            style="@style/TopButton"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="14dp"
+            android:paddingStart="22dp"
+            android:paddingEnd="26dp"
+            android:text="@string/all_apps"
+            android:drawableStart="@drawable/ic_apps"
+            android:focusable="true"
+            android:clickable="true"
+            android:nextFocusUp="@+id/grid" />
     </LinearLayout>
 
     <!-- The single floating glass highlight that springs between tiles. -->
