@@ -1118,13 +1118,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private void setDesktopForegroundVisible(boolean visible) {
         View foreground = findViewById(R.id.desktopForeground);
-        View heroName = findViewById(R.id.heroName);
         View glass = findViewById(R.id.glass);
         if (foreground != null) {
             foreground.setVisibility(visible ? View.VISIBLE : View.INVISIBLE);
         }
-        if (heroName != null && cfg != null && cfg.dockTitle) {
-            heroName.setVisibility(visible ? View.VISIBLE : View.GONE);
+        if (heroName != null && heroName.getVisibility() != View.GONE) {
+            heroName.setVisibility(visible ? View.VISIBLE : View.INVISIBLE);
         }
         if (glass != null) {
             glass.setVisibility(visible ? View.VISIBLE : View.INVISIBLE);
