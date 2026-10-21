@@ -207,8 +207,7 @@ final class AllAppsDialog extends Dialog {
         @Override
         public void onBindViewHolder(@NonNull AllAppsHolder holder, int position) {
             AppItem item = appList.get(position);
-            holder.name.setText(item.label);
-            holder.name.setVisibility(View.VISIBLE);
+            holder.name.setVisibility(View.GONE);
 
             if (item.banner != null) {
                 holder.banner.setImageDrawable(item.banner);

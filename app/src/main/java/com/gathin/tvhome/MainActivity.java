@@ -1117,18 +1117,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void setDesktopForegroundVisible(boolean visible) {
-        float alpha = visible ? 1f : 0f;
-        int duration = 220;
-        View leftBlock = findViewById(R.id.leftBlock);
-        View topButtons = findViewById(R.id.topButtons);
+        View foreground = findViewById(R.id.desktopForeground);
         View heroName = findViewById(R.id.heroName);
         View glass = findViewById(R.id.glass);
-        if (leftBlock != null) leftBlock.animate().alpha(alpha).setDuration(duration).start();
-        if (topButtons != null) topButtons.animate().alpha(alpha).setDuration(duration).start();
-        if (grid != null) grid.animate().alpha(alpha).setDuration(duration).start();
-        if (btnAllApps != null) btnAllApps.animate().alpha(alpha).setDuration(duration).start();
-        if (heroName != null) heroName.animate().alpha(alpha).setDuration(duration).start();
-        if (glass != null) glass.animate().alpha(alpha).setDuration(duration).start();
+        if (foreground != null) {
+            foreground.setVisibility(visible ? View.VISIBLE : View.INVISIBLE);
+        }
+        if (heroName != null && cfg != null && cfg.dockTitle) {
+            heroName.setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
+        if (glass != null) {
+            glass.setVisibility(visible ? View.VISIBLE : View.INVISIBLE);
+        }
     }
 
     private void showAllApps() {

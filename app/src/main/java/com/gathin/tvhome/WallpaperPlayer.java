@@ -34,6 +34,9 @@ final class WallpaperPlayer {
     private boolean loading;
     private String displayed = "";
 
+    private final android.os.Handler mainHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private View shadeView;
+
     WallpaperPlayer(Context context, FrameLayout root, Config config) {
         this.root = root;
         files = new ArrayList<>(config.wallpapers);
@@ -45,16 +48,19 @@ final class WallpaperPlayer {
         image = new ImageView(context);
         image.setScaleType(ImageView.ScaleType.CENTER_CROP);
         image.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        root.addView(image, 0, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+        shadeView = new View(context);
+        shadeView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        shadeView.setVisibility(View.GONE);
+        root.addView(shadeView, 1, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
         if (config.wallpaperEnabled && !files.isEmpty()) {
-            root.addView(image, 0, new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            // No shade layer at all when the theme doesn't dim: a full-screen view is overdraw on 1 GB TVs.
             if (config.wallpaperDim > 0) {
-                View shade = new View(context);
-                shade.setBackgroundColor((config.wallpaperDim * 255 / 100) << 24);
-                shade.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-                root.addView(shade, 1, new FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                shadeView.setBackgroundColor((config.wallpaperDim * 255 / 100) << 24);
+                shadeView.setVisibility(View.VISIBLE);
             }
             showFirst();
         }
@@ -177,13 +183,11 @@ final class WallpaperPlayer {
         decoder.execute(() -> {
             Bitmap bitmap = decode(file);
             if (bitmap != null) {
-                image.post(() -> {
+                mainHandler.post(() -> {
                     if (closed) return;
-                    ensureViewsAttached();
                     updateDim(dim);
                     image.setImageBitmap(bitmap);
-                    image.setAlpha(0f);
-                    image.animate().alpha(1f).setDuration(350).start();
+                    image.setAlpha(1f);
                 });
             }
         });
@@ -198,30 +202,14 @@ final class WallpaperPlayer {
         decoder.execute(() -> {
             Bitmap bitmap = decodeResource(resId);
             if (bitmap != null) {
-                image.post(() -> {
+                mainHandler.post(() -> {
                     if (closed) return;
-                    ensureViewsAttached();
                     updateDim(dim);
                     image.setImageBitmap(bitmap);
-                    image.setAlpha(0f);
-                    image.animate().alpha(1f).setDuration(350).start();
+                    image.setAlpha(1f);
                 });
             }
         });
-    }
-
-    private void ensureViewsAttached() {
-        if (image.getParent() == null) {
-            root.addView(image, 0, new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        }
-        if (shadeView == null) {
-            shadeView = new View(image.getContext());
-            shadeView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-            int idx = root.indexOfChild(image);
-            root.addView(shadeView, idx >= 0 ? idx + 1 : 1, new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        }
     }
 
     private void updateDim(int dim) {
@@ -270,8 +258,9 @@ final class WallpaperPlayer {
     void clearWallpaper() {
         currentResId = -1;
         currentFilePath = "";
-        image.post(() -> {
+        mainHandler.post(() -> {
             image.setImageDrawable(null);
+            image.setAlpha(0f);
             if (shadeView != null) {
                 shadeView.setVisibility(View.GONE);
             }
