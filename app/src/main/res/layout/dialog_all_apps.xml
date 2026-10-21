@@ -2,23 +2,26 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#99080B10"
+    android:background="#A6080B10"
     android:paddingStart="56dp"
     android:paddingEnd="56dp"
-    android:paddingTop="32dp"
-    android:paddingBottom="24dp"
+    android:paddingTop="28dp"
+    android:paddingBottom="20dp"
     android:clipChildren="false"
     android:clipToPadding="false">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical">
+        android:orientation="vertical"
+        android:clipChildren="false"
+        android:clipToPadding="false">
 
         <TextView
             android:id="@+id/allAppsTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginBottom="6dp"
             android:text="@string/all_apps"
             android:textColor="#FFFFFFFF"
             android:textSize="28sp"
@@ -29,9 +32,11 @@
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="10dp"
+            android:paddingTop="18dp"
+            android:paddingBottom="32dp"
             android:clipToPadding="false"
-            android:paddingBottom="24dp"
+            android:clipChildren="false"
             android:overScrollMode="never"
             android:scrollbars="none" />
     </LinearLayout>

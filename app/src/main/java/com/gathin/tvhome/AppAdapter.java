@@ -363,6 +363,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             int pad = Math.round(4 * density);
             v.setPadding(v.getPaddingLeft(), pad, v.getPaddingRight(), pad);
         }
+        name.setVisibility(View.GONE);
         name.setLayoutParams(nameLp);
         return new Holder(v, listener, animations, advancedEffects, reducedMotion);
     }
@@ -392,7 +393,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             boolean focused = h.card.isFocused();
             h.card.setScaleX(focused && animations ? focusScale() : 1f);
             h.card.setScaleY(focused && animations ? focusScale() : 1f);
-            h.card.setTranslationY(focused && advancedEffects ? -4f * ctx.getResources().getDisplayMetrics().density : 0f);
+            h.card.setTranslationY(0f);
             h.card.setTranslationZ(focused && advancedEffects ? 8f * ctx.getResources().getDisplayMetrics().density : 0f);
             if (h.plusIcon != null) h.plusIcon.setTextColor(focused ? 0xFFFFFFFF : 0x80FFFFFF);
             h.card.setOnClickListener(v -> {
@@ -411,12 +412,12 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         h.card.setVisibility(View.VISIBLE);
         h.card.setFocusable(true);
         h.name.setText(e.name);
-        h.name.setVisibility(dockRow && position < dockSize ? View.INVISIBLE : View.VISIBLE);   // the dock has no labels
+        h.name.setVisibility(View.GONE);
         boolean focused = h.card.isFocused();   // a rebind after reload() can hit the focused tile
-        h.name.setAlpha(focused ? 1f : 0f);
+        h.name.setAlpha(0f);
         h.card.setScaleX(focused && animations ? focusScale() : 1f);
         h.card.setScaleY(focused && animations ? focusScale() : 1f);
-        h.card.setTranslationY(focused && advancedEffects ? -4f * ctx.getResources().getDisplayMetrics().density : 0f);
+        h.card.setTranslationY(0f);
         h.card.setTranslationZ(focused && advancedEffects ? 8f * ctx.getResources().getDisplayMetrics().density : 0f);
         h.banner.setScaleX(focused && advancedEffects ? 1.035f : 1f);
         h.banner.setScaleY(focused && advancedEffects ? 1.035f : 1f);
@@ -558,7 +559,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
     }
 
     float focusScale() {
-        return !animations ? 1f : advancedEffects ? 1.12f : 1.10f;
+        return !animations ? 1f : 1.08f;
     }
 
     /** A vivid colour sampled from the app's banner (or icon), cached per entry; a card's accent when it set one. */
@@ -686,18 +687,14 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                     name.animate().alpha(focused ? 1f : 0f).setDuration(100).start();
                     if (focused) name.setTranslationY(density * 4f);
                 } else {
-                    float elevation = focused ? (advancedEffects ? 16f * density : 12f * density) : 0f;
-                    float floatY = focused ? -5f * density : 0f;
+                    float elevation = focused ? (advancedEffects ? 14f * density : 10f * density) : 0f;
                     view.animate().scaleX(s).scaleY(s)
-                            .translationY(floatY)
+                            .translationY(0f)
                             .translationZ(elevation)
-                            .setDuration(focused ? 220 : 170)
-                            .setInterpolator(new OvershootInterpolator(focused ? 1.05f : 0f))
+                            .setDuration(focused ? 180 : 140)
+                            .setInterpolator(new DecelerateInterpolator())
                             .withLayer().start();
-                    banner.animate().scaleX(focused ? 1.035f : 1f).scaleY(focused ? 1.035f : 1f)
-                            .setDuration(240).start();
-                    name.animate().alpha(focused ? 1f : 0f)
-                            .translationY(focused ? density * 4f : -density * 6f)
+                    banner.animate().scaleX(focused && advancedEffects ? 1.02f : 1f).scaleY(focused && advancedEffects ? 1.02f : 1f)
                             .setDuration(200).start();
                 }
                 int pos = getBindingAdapterPosition();

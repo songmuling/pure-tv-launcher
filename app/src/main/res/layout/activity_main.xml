@@ -12,18 +12,12 @@
         android:layout_height="match_parent"
         android:importantForAccessibility="no" />
 
-    <!-- Lightweight TV dynamic weather particles (rain, snow, night stars) -->
-    <com.gathin.tvhome.WeatherParticleView
-        android:id="@+id/weatherParticles"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:importantForAccessibility="no" />
-
-    <!-- Ambient glow in the colour of the focused dock app. -->
+    <!-- Ambient glow disabled to preserve pristine wallpaper background. -->
     <View
         android:id="@+id/ambient"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:visibility="gone"
         android:alpha="0" />
 
     <!-- Top shelf: the focused dock app's name, positioned above the dock in code. -->
@@ -270,8 +264,8 @@
                 android:layout_height="wrap_content"
                 android:paddingStart="36dp"
                 android:paddingEnd="36dp"
-                android:paddingTop="14dp"
-                android:paddingBottom="14dp"
+                android:paddingTop="10dp"
+                android:paddingBottom="10dp"
                 android:clipToPadding="false"
                 android:clipChildren="false"
                 android:overScrollMode="never"
@@ -286,8 +280,8 @@
             android:layout_width="wrap_content"
             android:layout_height="38dp"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="24dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="36dp"
             android:paddingStart="22dp"
             android:paddingEnd="26dp"
             android:text="@string/all_apps"
@@ -297,11 +291,12 @@
             android:nextFocusUp="@+id/grid" />
     </LinearLayout>
 
-    <!-- The single floating glass highlight that springs between tiles. -->
+    <!-- The single floating glass highlight that springs between tiles (disabled in favor of tile integrated focus border). -->
     <com.gathin.tvhome.GlassView
         android:id="@+id/glass"
         android:layout_width="10dp"
         android:layout_height="10dp"
+        android:visibility="gone"
         android:alpha="0"
         android:importantForAccessibility="no" />
 </FrameLayout>

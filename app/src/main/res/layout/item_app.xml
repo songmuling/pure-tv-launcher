@@ -2,8 +2,8 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingTop="8dp"
-    android:paddingBottom="8dp"
+    android:paddingTop="2dp"
+    android:paddingBottom="2dp"
     android:clipChildren="false"
     android:clipToPadding="false">
 
@@ -13,6 +13,7 @@
         android:layout_height="101dp"
         android:layout_gravity="center_horizontal|top"
         android:background="@drawable/tile_bg"
+        android:foreground="@drawable/tile_focus_border"
         android:focusable="true"
         android:clickable="true">
 
@@ -28,15 +29,15 @@
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:gravity="center"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp">
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp">
 
             <ImageView
                 android:id="@+id/icon"
-                android:layout_width="38dp"
-                android:layout_height="38dp"
+                android:layout_width="46dp"
+                android:layout_height="46dp"
                 android:layout_gravity="center_horizontal"
                 android:visibility="gone"
                 android:contentDescription="@null" />
@@ -45,13 +46,13 @@
                 android:id="@+id/label"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="6dp"
                 android:gravity="center"
                 android:singleLine="true"
                 android:ellipsize="end"
-                android:textColor="#FFFFFFFF"
-                android:textSize="12sp"
-                android:fontFamily="@font/outfit"
+                android:textColor="#F2FFFFFF"
+                android:textSize="13sp"
+                android:fontFamily="@font/outfit_medium"
                 android:visibility="gone" />
         </LinearLayout>
 
@@ -71,16 +72,16 @@
     <TextView
         android:id="@+id/name"
         android:layout_width="180dp"
-        android:layout_height="22dp"
+        android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal|top"
-        android:layout_marginTop="108dp"
+        android:layout_marginTop="104dp"
         android:gravity="center"
         android:singleLine="true"
         android:ellipsize="end"
         android:alpha="0"
-        android:translationY="-6dp"
         android:textColor="#F2FFFFFF"
         android:textSize="14sp"
         android:fontFamily="@font/outfit_medium"
-        android:letterSpacing="0.02" />
+        android:letterSpacing="0.02"
+        android:visibility="gone" />
 </FrameLayout>

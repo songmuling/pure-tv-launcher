@@ -104,9 +104,34 @@ final class AllAppsDialog extends Dialog {
         });
     }
 
+    private final android.content.BroadcastReceiver homeReceiver = new android.content.BroadcastReceiver() {
+        @Override
+        public void onReceive(android.content.Context context, Intent intent) {
+            if (Intent.ACTION_CLOSE_SYSTEM_DIALOGS.equals(intent.getAction())) {
+                dismiss();
+            }
+        }
+    };
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        try {
+            activity.registerReceiver(homeReceiver, new android.content.IntentFilter(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
+        } catch (Exception ignored) {}
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        try {
+            activity.unregisterReceiver(homeReceiver);
+        } catch (Exception ignored) {}
+    }
+
     @Override
     public boolean onKeyDown(int keyCode, @NonNull KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_ESCAPE) {
+        if (keyCode == KeyEvent.KEYCODE_BACK || keyCode == KeyEvent.KEYCODE_ESCAPE || keyCode == KeyEvent.KEYCODE_HOME) {
             dismiss();
             return true;
         }

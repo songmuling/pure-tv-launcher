@@ -111,7 +111,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private RecyclerView grid;
     private FrameLayout root;
     private WallpaperPlayer wallpaperPlayer;
-    private WeatherParticleView weatherParticles;
     private TextView weatherInfo;
     private GlassView glass;
     private View ambient;
@@ -280,7 +279,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         root = findViewById(R.id.root);
         root.setBackgroundColor(cfg.backgroundColor);
         wallpaperPlayer = new WallpaperPlayer(this, root, cfg);
-        weatherParticles = findViewById(R.id.weatherParticles);
         weatherInfo = findViewById(R.id.weatherInfo);
         if (weatherInfo != null) {
             weatherInfo.setOnClickListener(v -> updateWeatherAndWallpaper(true));
@@ -289,8 +287,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         sky = findViewById(R.id.sky);
         sky.setIntensity(cfg.skyIntensity);
         glass = findViewById(R.id.glass);
-        if (festive) glass.setAccent(festival.accentColor());
+        if (glass != null) glass.setVisibility(View.GONE);
         ambient = findViewById(R.id.ambient);
+        if (ambient != null) ambient.setVisibility(View.GONE);
         // The glow is one bitmap, so its alpha can be applied while drawing it. Otherwise every frame of
         // a fade renders it into a full-screen offscreen buffer first.
         ambient.forceHasOverlappingRendering(false);
@@ -498,10 +497,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         if (festive) applyFestiveSkin((TextView) btnInputs, (TextView) btnSettings);
 
-        // Hide the glass when focus leaves the tiles.
+        // Hide the glass and hero title when focus leaves the tiles.
         getWindow().getDecorView().getViewTreeObserver().addOnGlobalFocusChangeListener((oldF, newF) -> {
             boolean onTile = newF != null && newF.getId() == R.id.card;
-            if (!onTile) hideGlass();
+            if (!onTile) {
+                hideGlass();
+                hideHero();
+            }
         });
 
         packageFilter.addAction(Intent.ACTION_PACKAGE_ADDED);
@@ -538,6 +540,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        if (currentAllAppsDialog != null && currentAllAppsDialog.isShowing()) {
+            currentAllAppsDialog.dismiss();
+        }
         if (openLauncherSettingsIfAsked(intent)) return;
         if (intent == null || !intent.hasCategory(Intent.CATEGORY_HOME)) return;
         grid.scrollToPosition(0);
@@ -576,7 +581,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (showStats) startStats();
         sky.update();
         wallpaperPlayer.start();
-        if (weatherParticles != null) weatherParticles.start();
         updateWeatherAndWallpaper();
         handler.postDelayed(minuteTick, MINUTE_MS);
         if (festive && diya != null) {
@@ -671,7 +675,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onPause();
         endReorder();   // Home or another app while reordering keeps the order so far
         wallpaperPlayer.stop();
-        if (weatherParticles != null) weatherParticles.stop();
         stopAmbientAnimation();
         heroName.animate().cancel();
         ambient.animate().cancel();
@@ -1121,13 +1124,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
     }
 
+    private AllAppsDialog currentAllAppsDialog;
+
     private void showAllApps() {
         setDesktopForegroundVisible(false);
-        AllAppsDialog dialog = new AllAppsDialog(this, animations, () -> {
+        currentAllAppsDialog = new AllAppsDialog(this, animations, () -> {
+            currentAllAppsDialog = null;
             setDesktopForegroundVisible(true);
             if (btnAllApps != null) btnAllApps.requestFocus();
         });
-        dialog.show();
+        currentAllAppsDialog.show();
     }
 
     @Override
@@ -1219,41 +1225,25 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             hideHero();
             return;
         }
-        int color = adapter.ambientColorAt(position);
         float y = dockTopInRoot - 14 * density - 26 * density - heroName.getHeight();
         boolean changed = !label.contentEquals(heroName.getText());
 
         if (!animations || reducedMotion) {
-            // Snap the shelf instead of sliding and fading it: each of those frames repaints the
-            // full-screen panel, and this switch exists for the GPUs that cannot afford it.
             heroName.animate().cancel();
-            ambient.animate().cancel();
             heroName.setText(label);
             heroName.setY(y);
             heroName.setTranslationX(0f);
             heroName.setAlpha(1f);
-            setAmbient(color);
-            if (!animations) {
-                ambient.setAlpha(1f);
-                heroShown = true;
-            } else if (!heroShown) {
-                ambient.setAlpha(0f);
-                ambient.animate().alpha(1f).setDuration(160).start();
-                heroShown = true;
-            }
+            heroShown = true;
             return;
         }
 
         if (!heroShown) {
-            stopAmbientAnimation();
             heroName.animate().cancel();
-            ambient.animate().cancel();
             heroName.setText(label);
             heroName.setY(y);
             heroName.setTranslationX(0f);
             heroName.animate().alpha(1f).setDuration(260).start();
-            setAmbient(color);
-            ambient.animate().alpha(1f).setDuration(600).start();
             heroShown = true;
         } else if (changed) {
             if (advancedEffects) heroName.animate().cancel();
@@ -1263,14 +1253,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 heroName.setTranslationX(12 * density);
                 heroName.animate().alpha(1f).translationX(0f).setDuration(200).start();
             }).start();
-            if (advancedEffects) {
-                transitionAmbient(color);
-            } else if (color != ambientColor) {
-                ambient.animate().alpha(0.35f).setDuration(200).withEndAction(() -> {
-                    setAmbient(color);
-                    ambient.animate().alpha(1f).setDuration(500).start();
-                }).start();
-            }
         } else {
             heroName.setY(y);
         }
@@ -2119,11 +2101,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             mode = LauncherSettingsActivity.MODE_WEATHER;
         }
 
-        boolean particlesEnabled = sp.getBoolean("weather_particles", true);
-        if (weatherParticles != null) {
-            weatherParticles.setParticleEnabled(particlesEnabled);
-        }
-
         if (LauncherSettingsActivity.MODE_WEATHER.equals(mode)) {
             if (!wallpaperPlayer.hasWallpaper()) {
                 wallpaperPlayer.setWallpaperResource(R.drawable.wallpaper_default, 45);
@@ -2133,7 +2110,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 applyWeather(info);
             });
         } else if (LauncherSettingsActivity.MODE_BING.equals(mode)) {
-            if (weatherParticles != null) weatherParticles.setWeatherCondition(null);
             if (!wallpaperPlayer.hasWallpaper()) {
                 wallpaperPlayer.setWallpaperResource(R.drawable.wallpaper_default, 45);
             }
@@ -2147,7 +2123,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             });
         } else {
             wallpaperPlayer.clearWallpaper();
-            if (weatherParticles != null) weatherParticles.setWeatherCondition(null);
             WeatherManager.fetch(this, force, info -> {
                 if (isFinishing() || isDestroyed()) return;
                 if (weatherInfo != null) {
@@ -2174,9 +2149,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (isFinishing() || isDestroyed()) return;
                 wallpaperPlayer.setWallpaper(file, 45);
             });
-            if (weatherParticles != null) {
-                weatherParticles.setWeatherCondition(info.condition);
-            }
         }
     }
 

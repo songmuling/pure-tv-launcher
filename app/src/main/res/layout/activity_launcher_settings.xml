@@ -66,10 +66,6 @@
             style="@style/SettingsRow"
             android:layout_marginTop="18dp" />
 
-        <TextView
-            android:id="@+id/weatherParticlesChoice"
-            style="@style/SettingsRow"
-            android:layout_marginTop="10dp" />
 
         <TextView
             android:id="@+id/weatherCityChoice"
