@@ -14,43 +14,43 @@ import java.util.Calendar;
 import java.util.Random;
 
 /**
- * 微软 Bing 官方 4K 超清天气风光壁纸池
- * 1. 采用微软 cn.bing.com 国内官方 CDN 永久直链（3840×2160 UHD 原图）
+ * 微软 Bing 官方 1080P 高清天气风光壁纸池
+ * 1. 采用微软 cn.bing.com 国内官方 CDN 永久直链（1920×1080 原图点对点）
  * 2. 按天气状态精准匹配不同 Bing 经典摄影作品，每天自动轮换新鲜感
  * 3. 本地磁盘自动持久化缓存，开机秒显、零流量消耗
  */
 public final class WeatherWallpaper {
     private static final String TAG = "WeatherWallpaper";
 
-    // 微软官方 CDN 永久 4K UHD 超清风光图池
+    // 微软官方 CDN 永久 1080P 高清风光图池（体积小、加载快、点对点清晰）
     private static final String[] SUNNY_POOL = {
-            "https://cn.bing.com/th?id=OHR.PlitviceAutumn_ZH-CN5646237897_UHD.jpg", // 湖山艳阳
-            "https://cn.bing.com/th?id=OHR.BabcockSP_ZH-CN5266848536_UHD.jpg",     // 阳光溪谷
-            "https://cn.bing.com/th?id=OHR.SneffelsAutumn_ZH-CN3002661429_UHD.jpg"  // 金色晴空雪峰
+            "https://cn.bing.com/th?id=OHR.PlitviceAutumn_ZH-CN5646237897_1920x1080.jpg", // 湖山艳阳
+            "https://cn.bing.com/th?id=OHR.BabcockSP_ZH-CN5266848536_1920x1080.jpg",     // 阳光溪谷
+            "https://cn.bing.com/th?id=OHR.SneffelsAutumn_ZH-CN3002661429_1920x1080.jpg"  // 金色晴空雪峰
     };
 
     private static final String[] SUNSET_POOL = {
-            "https://cn.bing.com/th?id=OHR.VietnamBridge_ZH-CN6134321119_UHD.jpg",  // 晚霞江桥
-            "https://cn.bing.com/th?id=OHR.DolbadarnWales_ZH-CN3649667806_UHD.jpg"  // 古堡落日暮云
+            "https://cn.bing.com/th?id=OHR.VietnamBridge_ZH-CN6134321119_1920x1080.jpg",  // 晚霞江桥
+            "https://cn.bing.com/th?id=OHR.DolbadarnWales_ZH-CN3649667806_1920x1080.jpg"  // 古堡落日暮云
     };
 
     private static final String[] NIGHT_POOL = {
-            "https://cn.bing.com/th?id=OHR.IlesSanguinaires_ZH-CN3149346035_UHD.jpg",// 暮夜孤岛星空
-            "https://cn.bing.com/th?id=OHR.DolbadarnWales_ZH-CN3649667806_UHD.jpg"  // 寂静暗夜暮色
+            "https://cn.bing.com/th?id=OHR.IlesSanguinaires_ZH-CN3149346035_1920x1080.jpg",// 暮夜孤岛星空
+            "https://cn.bing.com/th?id=OHR.DolbadarnWales_ZH-CN3649667806_1920x1080.jpg"  // 寂静暗夜暮色
     };
 
     private static final String[] CLOUDY_POOL = {
-            "https://cn.bing.com/th?id=OHR.ChauvetPaintingsFrance_ZH-CN3150703955_UHD.jpg", // 苍茫多云峡谷
-            "https://cn.bing.com/th?id=OHR.ForestofDean_ZH-CN2654753621_UHD.jpg"          // 晨雾多云密林
+            "https://cn.bing.com/th?id=OHR.ChauvetPaintingsFrance_ZH-CN3150703955_1920x1080.jpg", // 苍茫多云峡谷
+            "https://cn.bing.com/th?id=OHR.ForestofDean_ZH-CN2654753621_1920x1080.jpg"          // 晨雾多云密林
     };
 
     private static final String[] RAIN_POOL = {
-            "https://cn.bing.com/th?id=OHR.ForestofDean_ZH-CN2654753621_UHD.jpg",  // 幽绿雨雾林海
-            "https://cn.bing.com/th?id=OHR.BabcockSP_ZH-CN5266848536_UHD.jpg"      // 雨后清泉流水
+            "https://cn.bing.com/th?id=OHR.ForestofDean_ZH-CN2654753621_1920x1080.jpg",  // 幽绿雨雾林海
+            "https://cn.bing.com/th?id=OHR.BabcockSP_ZH-CN5266848536_1920x1080.jpg"      // 雨后清泉流水
     };
 
     private static final String[] SNOW_POOL = {
-            "https://cn.bing.com/th?id=OHR.SneffelsAutumn_ZH-CN3002661429_UHD.jpg"  // 冰雪高山圣洁白雪
+            "https://cn.bing.com/th?id=OHR.SneffelsAutumn_ZH-CN3002661429_1920x1080.jpg"  // 冰雪高山圣洁白雪
     };
 
     public interface Callback {
@@ -58,6 +58,29 @@ public final class WeatherWallpaper {
     }
 
     private WeatherWallpaper() {}
+
+    /**
+     * 获取本地已有的最新天气壁纸缓存文件（如果有），用于毫秒级首帧直接展示
+     */
+    public static File getCachedWallpaper(Context context) {
+        try {
+            File cacheDir = new File(context.getFilesDir(), "weather_wallpapers");
+            if (!cacheDir.exists()) return null;
+            File[] files = cacheDir.listFiles();
+            if (files == null || files.length == 0) return null;
+            File newest = null;
+            for (File f : files) {
+                if (f.isFile() && f.getName().startsWith("bing_w_") && f.length() > 30000) {
+                    if (newest == null || f.lastModified() > newest.lastModified()) {
+                        newest = f;
+                    }
+                }
+            }
+            return newest;
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
     public static void fetch(Context context, WeatherManager.WeatherCondition condition, Callback callback) {
         if (condition == null) condition = WeatherManager.WeatherCondition.CLEAR_DAY;
@@ -85,13 +108,9 @@ public final class WeatherWallpaper {
                     return;
                 }
 
-                // 优先从微软官方 CDN 拉取 4K UHD 原图，失败时自动降级拉取 1080P
+                // 拉取 1080P 高清原图（通常仅 300KB 左右，秒级下载）
                 File tempFile = new File(cacheDir, "download_weather.tmp");
                 boolean downloaded = downloadUrl(selectedUrl, tempFile);
-                if (!downloaded && selectedUrl.contains("_UHD.jpg")) {
-                    String hdUrl = selectedUrl.replace("_UHD.jpg", "_1920x1080.jpg");
-                    downloaded = downloadUrl(hdUrl, tempFile);
-                }
 
                 if (downloaded && tempFile.length() > 30000) {
                     if (targetFile.exists()) targetFile.delete();
@@ -103,7 +122,7 @@ public final class WeatherWallpaper {
                     if (tempFile.exists()) tempFile.delete();
                 }
             } catch (Exception e) {
-                Log.w(TAG, "拉取 Bing 天气 4K 壁纸异常: " + e.getMessage());
+                Log.w(TAG, "拉取 Bing 天气壁纸异常: " + e.getMessage());
             }
         }).start();
     }
@@ -115,8 +134,8 @@ public final class WeatherWallpaper {
         try {
             URL url = new URL(fileUrl);
             conn = (HttpURLConnection) url.openConnection();
-            conn.setConnectTimeout(8000);
-            conn.setReadTimeout(15000);
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(8000);
             conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
             if (conn.getResponseCode() != 200) {
                 return false;

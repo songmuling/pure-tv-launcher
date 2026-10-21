@@ -270,7 +270,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         sourcePanelAction = cfg.sourcePanelAction;
 
         root = findViewById(R.id.root);
-        root.setBackgroundColor(cfg.backgroundColor);
+        if (cfg.overlayApplied && cfg.backgroundColor != 0xFF000000) {
+            root.setBackgroundColor(cfg.backgroundColor);
+        } else {
+            root.setBackgroundResource(R.drawable.bg_minimalist);
+        }
         wallpaperPlayer = new WallpaperPlayer(this, root, cfg);
         weatherInfo = findViewById(R.id.weatherInfo);
         if (weatherInfo != null) {
@@ -2027,7 +2031,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
 
         if (LauncherSettingsActivity.MODE_WEATHER.equals(mode)) {
-            if (!wallpaperPlayer.hasWallpaper()) {
+            File cachedWeather = WeatherWallpaper.getCachedWallpaper(this);
+            if (cachedWeather != null) {
+                wallpaperPlayer.setWallpaper(cachedWeather, 45);
+            } else if (!wallpaperPlayer.hasWallpaper()) {
                 wallpaperPlayer.setWallpaperResource(R.drawable.wallpaper_default, 45);
             }
             WeatherManager.fetch(this, force, info -> {
@@ -2035,10 +2042,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 applyWeather(info);
             });
         } else if (LauncherSettingsActivity.MODE_BING.equals(mode)) {
-            if (!wallpaperPlayer.hasWallpaper()) {
+            File cachedBing = BingWallpaper.getCachedWallpaper(this);
+            if (cachedBing != null) {
+                wallpaperPlayer.setWallpaper(cachedBing, 45);
+            } else if (!wallpaperPlayer.hasWallpaper()) {
                 wallpaperPlayer.setWallpaperResource(R.drawable.wallpaper_default, 45);
             }
-            BingWallpaper.fetch(this, file -> wallpaperPlayer.setWallpaper(file, 45));
+            BingWallpaper.fetch(this, file -> {
+                if (isFinishing() || isDestroyed()) return;
+                wallpaperPlayer.setWallpaper(file, 45);
+            });
             WeatherManager.fetch(this, force, info -> {
                 if (isFinishing() || isDestroyed()) return;
                 if (weatherInfo != null) {
@@ -2067,9 +2080,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         SharedPreferences sp = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
         String mode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_WEATHER);
         if (LauncherSettingsActivity.MODE_WEATHER.equals(mode)) {
-            if (!wallpaperPlayer.hasWallpaper()) {
-                wallpaperPlayer.setWallpaperResource(R.drawable.wallpaper_default, 45);
-            }
             WeatherWallpaper.fetch(this, info.condition, file -> {
                 if (isFinishing() || isDestroyed()) return;
                 wallpaperPlayer.setWallpaper(file, 45);
