@@ -273,7 +273,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         weatherParticles = findViewById(R.id.weatherParticles);
         weatherInfo = findViewById(R.id.weatherInfo);
         if (weatherInfo != null) {
-            weatherInfo.setOnClickListener(v -> updateWeatherAndWallpaper());
+            weatherInfo.setOnClickListener(v -> updateWeatherAndWallpaper(true));
         }
         updateWeatherAndWallpaper();
         sky = findViewById(R.id.sky);
@@ -2053,6 +2053,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void updateWeatherAndWallpaper() {
+        updateWeatherAndWallpaper(false);
+    }
+
+    private void updateWeatherAndWallpaper(boolean force) {
         SharedPreferences sp = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
         String mode;
         if (sp.contains("wallpaper_mode")) {
@@ -2069,14 +2073,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
 
         if (LauncherSettingsActivity.MODE_WEATHER.equals(mode)) {
-            WeatherManager.fetch(this, info -> {
+            WeatherManager.fetch(this, force, info -> {
                 if (isFinishing() || isDestroyed()) return;
                 applyWeather(info);
             });
         } else if (LauncherSettingsActivity.MODE_BING.equals(mode)) {
             if (weatherParticles != null) weatherParticles.setWeatherCondition(null);
             BingWallpaper.fetch(this, file -> wallpaperPlayer.setWallpaper(file, 45));
-            WeatherManager.fetch(this, info -> {
+            WeatherManager.fetch(this, force, info -> {
                 if (isFinishing() || isDestroyed()) return;
                 if (weatherInfo != null) {
                     weatherInfo.setText(info.getSummary());
@@ -2086,7 +2090,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         } else {
             wallpaperPlayer.clearWallpaper();
             if (weatherParticles != null) weatherParticles.setWeatherCondition(null);
-            WeatherManager.fetch(this, info -> {
+            WeatherManager.fetch(this, force, info -> {
                 if (isFinishing() || isDestroyed()) return;
                 if (weatherInfo != null) {
                     weatherInfo.setText(info.getSummary());

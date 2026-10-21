@@ -94,11 +94,32 @@ public final class WeatherManager {
 
     /** 异步拉取天气，并在主线程回调 */
     public static void fetch(Context context, Callback callback) {
+        fetch(context, false, callback);
+    }
+
+    /** 异步拉取天气，支持强制即时刷新 */
+    public static void fetch(Context context, boolean force, Callback callback) {
         SharedPreferences sp = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
         long lastTime = sp.getLong("last_update", 0);
         long now = System.currentTimeMillis();
 
-        if (now - lastTime < CACHE_VALID_MS && cachedInfo != null) {
+        // 智能感知昼夜与天色时段切换（日间 6~16点、夕阳晚霞 17~18点、晴朗夜空 19~5点）
+        boolean dayNow = isDaytime();
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        boolean phaseChanged = false;
+        if (cachedInfo != null) {
+            if (cachedInfo.isDay != dayNow) {
+                phaseChanged = true;
+            } else if (cachedInfo.condition == WeatherCondition.CLEAR_DAY && hour >= 17) {
+                phaseChanged = true;
+            } else if (cachedInfo.condition == WeatherCondition.CLEAR_SUNSET && (hour >= 19 || hour < 17)) {
+                phaseChanged = true;
+            } else if (cachedInfo.condition == WeatherCondition.CLEAR_NIGHT && (hour >= 6 && hour < 19)) {
+                phaseChanged = true;
+            }
+        }
+
+        if (!force && !phaseChanged && (now - lastTime < CACHE_VALID_MS) && cachedInfo != null) {
             if (callback != null) callback.onWeatherUpdated(cachedInfo);
             return;
         }

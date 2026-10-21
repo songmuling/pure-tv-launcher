@@ -159,8 +159,12 @@ final class WallpaperPlayer {
         }
     }
 
+    private String currentFilePath = "";
+
     void setWallpaper(File file, int dim) {
         if (file == null || !file.exists() || closed) return;
+        if (file.getAbsolutePath().equals(currentFilePath)) return;
+        currentFilePath = file.getAbsolutePath();
         currentResId = -1;
         decoder.execute(() -> {
             Bitmap bitmap = decode(file);
@@ -241,6 +245,7 @@ final class WallpaperPlayer {
 
     void clearWallpaper() {
         currentResId = -1;
+        currentFilePath = "";
         image.post(() -> {
             image.setImageDrawable(null);
             if (image.getParent() != null) root.removeView(image);
