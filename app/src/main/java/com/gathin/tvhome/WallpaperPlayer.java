@@ -266,6 +266,4 @@ final class WallpaperPlayer {
             }
         });
     }
-
-    private View shadeView;
 }
