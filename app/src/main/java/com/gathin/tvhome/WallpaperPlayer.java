@@ -142,19 +142,27 @@ final class WallpaperPlayer {
             BitmapFactory.decodeFile(file.getPath(), options);
             int width = options.outWidth, height = options.outHeight;
             if (width <= 0 || height <= 0) return null;
-            int sample = WallpaperSize.sampleSize(width, height, this.width, this.height);
-            if (!WallpaperSize.accepted(width / sample, height / sample)) return null;
+            if (!WallpaperSize.accepted(width, height)) {
+                Log.w("TvHome.Wallpaper", "Image too large: " + width + "x" + height);
+                return null;
+            }
+            int screenW = Math.max(this.width, this.height);
+            int screenH = Math.min(this.width, this.height);
+            if (screenW <= 0) screenW = 1920;
+            if (screenH <= 0) screenH = 1080;
+
+            int sample = 1;
+            while (width / (sample * 2) >= screenW && height / (sample * 2) >= screenH) {
+                sample *= 2;
+            }
             options.inJustDecodeBounds = false;
             options.inSampleSize = sample;
-            int[] scale = WallpaperSize.coverScale(width / sample, height / sample, this.width, this.height);
-            if (scale != null) {
-                options.inScaled = true;
-                options.inDensity = scale[0];
-                options.inTargetDensity = scale[1];
-            }
             options.inPreferredConfig = Bitmap.Config.RGB_565;
-            return BitmapFactory.decodeFile(file.getPath(), options);
+            Bitmap bitmap = BitmapFactory.decodeFile(file.getPath(), options);
+            Log.d("TvHome.Wallpaper", "Decoded wallpaper: " + file.getName() + " -> " + (bitmap != null ? bitmap.getWidth() + "x" + bitmap.getHeight() : "null"));
+            return bitmap;
         } catch (Exception | OutOfMemoryError failure) {
+            Log.w("TvHome.Wallpaper", "Decode error for: " + file.getName() + ": " + failure.getMessage());
             return null;
         }
     }
@@ -171,20 +179,11 @@ final class WallpaperPlayer {
             if (bitmap != null) {
                 image.post(() -> {
                     if (closed) return;
-                    if (image.getParent() == null) {
-                        root.addView(image, 0, new FrameLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-                    }
-                    if (dim > 0 && shadeView == null) {
-                        shadeView = new View(image.getContext());
-                        shadeView.setBackgroundColor((dim * 255 / 100) << 24);
-                        shadeView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-                        root.addView(shadeView, 1, new FrameLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-                    }
+                    ensureViewsAttached();
+                    updateDim(dim);
                     image.setImageBitmap(bitmap);
                     image.setAlpha(0f);
-                    image.animate().alpha(1f).setDuration(400).start();
+                    image.animate().alpha(1f).setDuration(350).start();
                 });
             }
         });
@@ -195,28 +194,45 @@ final class WallpaperPlayer {
     void setWallpaperResource(int resId, int dim) {
         if (resId <= 0 || resId == currentResId || closed) return;
         currentResId = resId;
+        currentFilePath = "";
         decoder.execute(() -> {
             Bitmap bitmap = decodeResource(resId);
             if (bitmap != null) {
                 image.post(() -> {
                     if (closed) return;
-                    if (image.getParent() == null) {
-                        root.addView(image, 0, new FrameLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-                    }
-                    if (dim > 0 && shadeView == null) {
-                        shadeView = new View(image.getContext());
-                        shadeView.setBackgroundColor((dim * 255 / 100) << 24);
-                        shadeView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-                        root.addView(shadeView, 1, new FrameLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-                    }
+                    ensureViewsAttached();
+                    updateDim(dim);
                     image.setImageBitmap(bitmap);
                     image.setAlpha(0f);
-                    image.animate().alpha(1f).setDuration(400).start();
+                    image.animate().alpha(1f).setDuration(350).start();
                 });
             }
         });
+    }
+
+    private void ensureViewsAttached() {
+        if (image.getParent() == null) {
+            root.addView(image, 0, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        }
+        if (shadeView == null) {
+            shadeView = new View(image.getContext());
+            shadeView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            int idx = root.indexOfChild(image);
+            root.addView(shadeView, idx >= 0 ? idx + 1 : 1, new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        }
+    }
+
+    private void updateDim(int dim) {
+        if (shadeView != null) {
+            if (dim > 0) {
+                shadeView.setBackgroundColor((dim * 255 / 100) << 24);
+                shadeView.setVisibility(View.VISIBLE);
+            } else {
+                shadeView.setVisibility(View.GONE);
+            }
+        }
     }
 
     private Bitmap decodeResource(int resId) {
@@ -226,19 +242,23 @@ final class WallpaperPlayer {
             BitmapFactory.decodeResource(root.getResources(), resId, options);
             int width = options.outWidth, height = options.outHeight;
             if (width <= 0 || height <= 0) return null;
-            int sample = WallpaperSize.sampleSize(width, height, this.width, this.height);
-            if (!WallpaperSize.accepted(width / sample, height / sample)) return null;
+            int screenW = Math.max(this.width, this.height);
+            int screenH = Math.min(this.width, this.height);
+            if (screenW <= 0) screenW = 1920;
+            if (screenH <= 0) screenH = 1080;
+
+            int sample = 1;
+            while (width / (sample * 2) >= screenW && height / (sample * 2) >= screenH) {
+                sample *= 2;
+            }
             options.inJustDecodeBounds = false;
             options.inSampleSize = sample;
-            int[] scale = WallpaperSize.coverScale(width / sample, height / sample, this.width, this.height);
-            if (scale != null) {
-                options.inScaled = true;
-                options.inDensity = scale[0];
-                options.inTargetDensity = scale[1];
-            }
             options.inPreferredConfig = Bitmap.Config.RGB_565;
-            return BitmapFactory.decodeResource(root.getResources(), resId, options);
+            Bitmap bitmap = BitmapFactory.decodeResource(root.getResources(), resId, options);
+            Log.d("TvHome.Wallpaper", "Decoded resource wallpaper: " + resId + " -> " + (bitmap != null ? bitmap.getWidth() + "x" + bitmap.getHeight() : "null"));
+            return bitmap;
         } catch (Exception | OutOfMemoryError failure) {
+            Log.w("TvHome.Wallpaper", "Decode resource error: " + failure.getMessage());
             return null;
         }
     }
@@ -252,10 +272,8 @@ final class WallpaperPlayer {
         currentFilePath = "";
         image.post(() -> {
             image.setImageDrawable(null);
-            if (image.getParent() != null) root.removeView(image);
-            if (shadeView != null && shadeView.getParent() != null) {
-                root.removeView(shadeView);
-                shadeView = null;
+            if (shadeView != null) {
+                shadeView.setVisibility(View.GONE);
             }
         });
     }

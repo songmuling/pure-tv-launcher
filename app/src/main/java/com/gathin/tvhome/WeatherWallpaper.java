@@ -22,35 +22,35 @@ import java.util.Random;
 public final class WeatherWallpaper {
     private static final String TAG = "WeatherWallpaper";
 
-    // 微软官方 CDN 永久 1080P/2K 高清风光图池（秒级拉取，轻量稳定）
+    // 微软官方 CDN 永久 4K UHD 超清风光图池
     private static final String[] SUNNY_POOL = {
-            "https://cn.bing.com/th?id=OHR.PlitviceAutumn_ZH-CN5646237897_1920x1080.jpg", // 湖山艳阳
-            "https://cn.bing.com/th?id=OHR.BabcockSP_ZH-CN5266848536_1920x1080.jpg",     // 阳光溪谷
-            "https://cn.bing.com/th?id=OHR.SneffelsAutumn_ZH-CN3002661429_1920x1080.jpg"  // 金色晴空雪峰
+            "https://cn.bing.com/th?id=OHR.PlitviceAutumn_ZH-CN5646237897_UHD.jpg", // 湖山艳阳
+            "https://cn.bing.com/th?id=OHR.BabcockSP_ZH-CN5266848536_UHD.jpg",     // 阳光溪谷
+            "https://cn.bing.com/th?id=OHR.SneffelsAutumn_ZH-CN3002661429_UHD.jpg"  // 金色晴空雪峰
     };
 
     private static final String[] SUNSET_POOL = {
-            "https://cn.bing.com/th?id=OHR.VietnamBridge_ZH-CN6134321119_1920x1080.jpg",  // 晚霞江桥
-            "https://cn.bing.com/th?id=OHR.DolbadarnWales_ZH-CN3649667806_1920x1080.jpg"  // 古堡落日暮云
+            "https://cn.bing.com/th?id=OHR.VietnamBridge_ZH-CN6134321119_UHD.jpg",  // 晚霞江桥
+            "https://cn.bing.com/th?id=OHR.DolbadarnWales_ZH-CN3649667806_UHD.jpg"  // 古堡落日暮云
     };
 
     private static final String[] NIGHT_POOL = {
-            "https://cn.bing.com/th?id=OHR.IlesSanguinaires_ZH-CN3149346035_1920x1080.jpg",// 暮夜孤岛星空
-            "https://cn.bing.com/th?id=OHR.DolbadarnWales_ZH-CN3649667806_1920x1080.jpg"  // 寂静暗夜暮色
+            "https://cn.bing.com/th?id=OHR.IlesSanguinaires_ZH-CN3149346035_UHD.jpg",// 暮夜孤岛星空
+            "https://cn.bing.com/th?id=OHR.DolbadarnWales_ZH-CN3649667806_UHD.jpg"  // 寂静暗夜暮色
     };
 
     private static final String[] CLOUDY_POOL = {
-            "https://cn.bing.com/th?id=OHR.ChauvetPaintingsFrance_ZH-CN3150703955_1920x1080.jpg", // 苍茫多云峡谷
-            "https://cn.bing.com/th?id=OHR.ForestofDean_ZH-CN2654753621_1920x1080.jpg"          // 晨雾多云密林
+            "https://cn.bing.com/th?id=OHR.ChauvetPaintingsFrance_ZH-CN3150703955_UHD.jpg", // 苍茫多云峡谷
+            "https://cn.bing.com/th?id=OHR.ForestofDean_ZH-CN2654753621_UHD.jpg"          // 晨雾多云密林
     };
 
     private static final String[] RAIN_POOL = {
-            "https://cn.bing.com/th?id=OHR.ForestofDean_ZH-CN2654753621_1920x1080.jpg",  // 幽绿雨雾林海
-            "https://cn.bing.com/th?id=OHR.BabcockSP_ZH-CN5266848536_1920x1080.jpg"      // 雨后清泉流水
+            "https://cn.bing.com/th?id=OHR.ForestofDean_ZH-CN2654753621_UHD.jpg",  // 幽绿雨雾林海
+            "https://cn.bing.com/th?id=OHR.BabcockSP_ZH-CN5266848536_UHD.jpg"      // 雨后清泉流水
     };
 
     private static final String[] SNOW_POOL = {
-            "https://cn.bing.com/th?id=OHR.SneffelsAutumn_ZH-CN3002661429_1920x1080.jpg"  // 冰雪高山圣洁白雪
+            "https://cn.bing.com/th?id=OHR.SneffelsAutumn_ZH-CN3002661429_UHD.jpg"  // 冰雪高山圣洁白雪
     };
 
     public interface Callback {
@@ -77,51 +77,67 @@ public final class WeatherWallpaper {
                 String fileName = "bing_w_" + finalCondition.name() + "_" + Math.abs(selectedUrl.hashCode()) + ".jpg";
                 File targetFile = new File(cacheDir, fileName);
 
-                // 命中本地缓存且大小大于 50KB 则直接使用
-                if (targetFile.exists() && targetFile.length() > 50000) {
+                // 命中本地缓存且大小大于 30KB 则直接使用
+                if (targetFile.exists() && targetFile.length() > 30000) {
                     if (callback != null) {
                         new Handler(Looper.getMainLooper()).post(() -> callback.onReady(targetFile));
                     }
                     return;
                 }
 
-                // 从微软官方 CDN 拉取 4K UHD
-                URL url = new URL(selectedUrl);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setConnectTimeout(8000);
-                conn.setReadTimeout(15000);
-                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
-                if (conn.getResponseCode() != 200) {
-                    conn.disconnect();
-                    return;
-                }
-
+                // 优先从微软官方 CDN 拉取 4K UHD 原图，失败时自动降级拉取 1080P
                 File tempFile = new File(cacheDir, "download_weather.tmp");
-                InputStream is = conn.getInputStream();
-                FileOutputStream fos = new FileOutputStream(tempFile);
-                byte[] buffer = new byte[8192];
-                int read;
-                while ((read = is.read(buffer)) != -1) {
-                    fos.write(buffer, 0, read);
+                boolean downloaded = downloadUrl(selectedUrl, tempFile);
+                if (!downloaded && selectedUrl.contains("_UHD.jpg")) {
+                    String hdUrl = selectedUrl.replace("_UHD.jpg", "_1920x1080.jpg");
+                    downloaded = downloadUrl(hdUrl, tempFile);
                 }
-                fos.flush();
-                fos.close();
-                is.close();
-                conn.disconnect();
 
-                if (tempFile.length() > 50000) {
+                if (downloaded && tempFile.length() > 30000) {
                     if (targetFile.exists()) targetFile.delete();
                     tempFile.renameTo(targetFile);
                     if (callback != null) {
                         new Handler(Looper.getMainLooper()).post(() -> callback.onReady(targetFile));
                     }
                 } else {
-                    tempFile.delete();
+                    if (tempFile.exists()) tempFile.delete();
                 }
             } catch (Exception e) {
-                Log.w(TAG, "拉取 Bing 天气 4K 壁纸失败: " + e.getMessage());
+                Log.w(TAG, "拉取 Bing 天气 4K 壁纸异常: " + e.getMessage());
             }
         }).start();
+    }
+
+    private static boolean downloadUrl(String fileUrl, File target) {
+        HttpURLConnection conn = null;
+        InputStream is = null;
+        FileOutputStream fos = null;
+        try {
+            URL url = new URL(fileUrl);
+            conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(8000);
+            conn.setReadTimeout(15000);
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+            if (conn.getResponseCode() != 200) {
+                return false;
+            }
+            is = conn.getInputStream();
+            fos = new FileOutputStream(target);
+            byte[] buffer = new byte[8192];
+            int read;
+            while ((read = is.read(buffer)) != -1) {
+                fos.write(buffer, 0, read);
+            }
+            fos.flush();
+            return true;
+        } catch (Exception e) {
+            Log.w(TAG, "下载壁纸失败: " + fileUrl + " -> " + e.getMessage());
+            return false;
+        } finally {
+            try { if (fos != null) fos.close(); } catch (Exception ignored) {}
+            try { if (is != null) is.close(); } catch (Exception ignored) {}
+            if (conn != null) conn.disconnect();
+        }
     }
 
     private static String[] getPool(WeatherManager.WeatherCondition condition) {

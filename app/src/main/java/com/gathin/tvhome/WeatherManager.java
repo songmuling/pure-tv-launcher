@@ -226,7 +226,7 @@ public final class WeatherManager {
         return hour >= 6 && hour < 19;
     }
 
-    private static WeatherCondition deduceFromClock() {
+    static WeatherCondition deduceFromClock() {
         int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
         if (hour >= 17 && hour < 19) return WeatherCondition.CLEAR_SUNSET;
         if (hour >= 6 && hour < 17) return WeatherCondition.CLEAR_DAY;
