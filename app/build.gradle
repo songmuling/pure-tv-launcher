@@ -33,12 +33,21 @@ android {
         }
     }
 
+    signingConfigs {
+        release {
+            storeFile file("puretv-release.jks")
+            storePassword "puretv123"
+            keyAlias "puretv"
+            keyPassword "puretv123"
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
         }
     }
 
