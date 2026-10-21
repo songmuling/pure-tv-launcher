@@ -26,27 +26,20 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build All Flavors APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleRelease --stacktrace
 
       - name: Upload Skyworth APK (创维专版)
         uses: actions/upload-artifact@v4
         with:
-          name: PureTV-Skyworth-APK
-          path: app/build/outputs/apk/skyworth/debug/*.apk
+          name: PureTV-Skyworth-Release-APK
+          path: app/build/outputs/apk/skyworth/release/*.apk
           retention-days: 14
 
-      - name: Upload Xiaomi APK (小米专版)
+      - name: Upload Universal APK (通用标准版)
         uses: actions/upload-artifact@v4
         with:
-          name: PureTV-Xiaomi-APK
-          path: app/build/outputs/apk/xiaomi/debug/*.apk
-          retention-days: 14
-
-      - name: Upload Universal APK (通用版)
-        uses: actions/upload-artifact@v4
-        with:
-          name: PureTV-Universal-APK
-          path: app/build/outputs/apk/universal/debug/*.apk
+          name: PureTV-Universal-Release-APK
+          path: app/build/outputs/apk/universal/release/*.apk
           retention-days: 14
 
       - name: Publish to GitHub Releases
@@ -58,30 +51,27 @@ jobs:
           make_latest: true
           generate_release_notes: true
           body: |
-            ### 📺 Pure TV Launcher 极简纯净电视桌面
+            ### 📺 Pure TV Launcher 极简纯净电视桌面 (Release 正式版)
             
             专为智能电视与电视盒子打造的轻量纯净桌面，去广告、开机秒启、极简流畅。
             
             #### 📦 安装包下载指南（请根据您的设备选择）：
-            - 🔹 **创维专版 (`PureTV-Skyworth-debug.apk`)**：
-              - 适合设备：创维小湃盒子（P3 Pro 等）、创维电视
+            - 🔹 **通用标准版 (`PureTV-Universal-release.apk`)**：
+              - 适合设备：小米、索尼、海信、TCL、长虹、飞利浦及外贸 Google TV 电视/盒子等 99% 的设备。
+              - 核心优化：完美兼容 Android 5.0 ~ 14+（老款小米电视 4A 等绝不闪退）；动态直通小米电视原生设置；正式版混淆与资源瘦身，体积仅 ~2MB，冷启动极速秒开。
+            - 🔹 **创维专版 (`PureTV-Skyworth-release.apk`)**：
+              - 适合设备：创维小湃盒子（P3 Pro 等）、创维电视。
               - 核心优化：伪装企鹅极光出厂白名单 `com.ktcp.launcher`，突破系统防替换保护；开机秒启（`directBootAware`）；设置键直达创维原生设置。
-            - 🔹 **小米专版 (`PureTV-Xiaomi-debug.apk`)**：
-              - 适合设备：小米电视 4A 及全系列小米电视/盒子
-              - 核心优化：全面兼容 Android 6.0 (API 21+)，杜绝老电视闪退；设置键直达 MIUI TV 专有设置。
-            - 🔹 **通用标准版 (`PureTV-Universal-debug.apk`)**：
-              - 适合设备：索尼、海信、TCL 或外贸 Google TV 电视/盒子。
             
-            #### ✨ 本次核心功能与升级：
-            1. **动态天气 4K 高清壁纸 (Bing 官方云端池)**：依据实时天气与昼夜晨昏自动换装微软官方 4K 摄影壁纸，无需大包体积（安装包仅 ~2MB），真 4K 细腻震撼。
-            2. **城市手动指定 / 防翻墙 IP 漂移**：支持全国 30+ 重点城市遥控器一键选择，即使家庭网络开启软路由 VPN / 代理，也不会错误定位到国外。
-            3. **必应每日壁纸 4K UHD 升级**：默认下载官方最高规格 4K 原图（_UHD.jpg），4K 大电视绝对清晰细腻。
-            4. **默认极简主题**：第三种壁纸模式更名为默认极简主题，保留纯正原生渐变质感。
-            5. **长按图标原地快捷菜单**：移动排序 / 置顶到首行程序坞 / 从桌面隐藏。
-            6. **已隐藏应用库**：被隐藏的系统或内置应用可在隐藏应用中心随时找回。
+            #### ✨ 核心功能与升级：
+            1. **Apple TV 纯正极简 Dock 桌面**：主界面仅保留 6 个常用应用黄金席位，单行排布绝对等宽等高，空槽位显示精美 `+` 号。
+            2. **毛玻璃「全部应用」抽屉**：Dock 正下方一键展开全屏 6 列应用中心，按返回键丝滑收起，点击任意应用秒启。
+            3. **智能 Dock 槽位分配与自动移位**：点击 `+` 号或长按已有磁贴直接弹出应用列表；从 `+` 号选择已有应用时原位置自动变 `+`，两已有应用对选时自动智能互换位置。
+            4. **微软官方 4K 天气摄影壁纸**：依据本地实时天气与昼夜晨昏自动换装微软官方 4K 超清大片摄影壁纸。
+            5. **天气城市手动指定 / 防 IP 漂移**：支持全国重点城市遥控器一键切换，翻墙软路由环境不漂移。
+            6. **必应每日 4K 超清壁纸**与**默认极简流光主题**自由切换。
           files: |
-            app/build/outputs/apk/skyworth/debug/*.apk
-            app/build/outputs/apk/xiaomi/debug/*.apk
-            app/build/outputs/apk/universal/debug/*.apk
+            app/build/outputs/apk/skyworth/release/*.apk
+            app/build/outputs/apk/universal/release/*.apk
 
 

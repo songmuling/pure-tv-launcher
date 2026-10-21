@@ -20,11 +20,6 @@ android {
             applicationId 'com.ktcp.launcher'
             versionNameSuffix "-skyworth"
         }
-        xiaomi {
-            dimension "device"
-            applicationId 'com.puretv.launcher'
-            versionNameSuffix "-xiaomi"
-        }
         universal {
             dimension "device"
             applicationId 'com.gathin.tvhome'
