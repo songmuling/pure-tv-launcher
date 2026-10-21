@@ -146,14 +146,19 @@ public final class LauncherSettingsActivity extends Activity {
 
     private void showCityDialog() {
         String currentCity = WeatherManager.getCustomCity(this);
-        WeatherCityPresets.City[] cities = WeatherCityPresets.PRESET_CITIES;
-        CharSequence[] items = new CharSequence[cities.length + 1];
+        CharSequence[] items = new CharSequence[WeatherCityPresets.PROVINCES.length + 1];
         items[0] = getString(R.string.weather_city_auto);
         int checkedIndex = 0;
-        for (int i = 0; i < cities.length; i++) {
-            items[i + 1] = cities[i].name;
-            if (cities[i].name.equals(currentCity)) {
-                checkedIndex = i + 1;
+        for (int i = 0; i < WeatherCityPresets.PROVINCES.length; i++) {
+            WeatherCityPresets.Province p = WeatherCityPresets.PROVINCES[i];
+            items[i + 1] = p.name;
+            if (checkedIndex == 0 && !currentCity.isEmpty()) {
+                for (WeatherCityPresets.City c : p.cities) {
+                    if (c.name.equals(currentCity)) {
+                        checkedIndex = i + 1;
+                        break;
+                    }
+                }
             }
         }
 
@@ -162,13 +167,47 @@ public final class LauncherSettingsActivity extends Activity {
                 .setSingleChoiceItems(items, checkedIndex, (dialog, which) -> {
                     if (which == 0) {
                         WeatherManager.setCustomCity(LauncherSettingsActivity.this, null, 0, 0);
+                        setResult(RESULT_OK);
+                        refresh();
+                        dialog.dismiss();
                     } else {
-                        WeatherCityPresets.City selected = cities[which - 1];
-                        WeatherManager.setCustomCity(LauncherSettingsActivity.this, selected.name, selected.lat, selected.lon);
+                        WeatherCityPresets.Province selectedProvince = WeatherCityPresets.PROVINCES[which - 1];
+                        if (selectedProvince.cities.length == 1) {
+                            WeatherCityPresets.City selected = selectedProvince.cities[0];
+                            WeatherManager.setCustomCity(LauncherSettingsActivity.this, selected.name, selected.lat, selected.lon);
+                            setResult(RESULT_OK);
+                            refresh();
+                            dialog.dismiss();
+                        } else {
+                            showSubCityDialog(selectedProvince, currentCity, dialog);
+                        }
                     }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void showSubCityDialog(WeatherCityPresets.Province province, String currentCity, android.content.DialogInterface parentDialog) {
+        CharSequence[] cityNames = new CharSequence[province.cities.length];
+        int checkedCityIndex = -1;
+        for (int i = 0; i < province.cities.length; i++) {
+            cityNames[i] = province.cities[i].name;
+            if (province.cities[i].name.equals(currentCity)) {
+                checkedCityIndex = i;
+            }
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle(province.name)
+                .setSingleChoiceItems(cityNames, checkedCityIndex, (dialog, which) -> {
+                    WeatherCityPresets.City selected = province.cities[which];
+                    WeatherManager.setCustomCity(LauncherSettingsActivity.this, selected.name, selected.lat, selected.lon);
                     setResult(RESULT_OK);
                     refresh();
                     dialog.dismiss();
+                    if (parentDialog != null) {
+                        parentDialog.dismiss();
+                    }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();

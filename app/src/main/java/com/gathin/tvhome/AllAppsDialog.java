@@ -88,12 +88,6 @@ final class AllAppsDialog extends Dialog {
 
         loadInstalledApps();
 
-        TextView title = findViewById(R.id.allAppsTitle);
-        TextView subtitle = findViewById(R.id.allAppsSubtitle);
-        if (subtitle != null) {
-            subtitle.setText(activity.getString(R.string.all_apps_count_hint, appList.size()));
-        }
-
         RecyclerView grid = findViewById(R.id.allAppsGrid);
         if (grid != null) {
             grid.setLayoutManager(new GridLayoutManager(activity, 6));

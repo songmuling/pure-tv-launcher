@@ -2104,35 +2104,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         PopupWindow popup = glassPopup(panel, (int) (200 * density));
         addSettingsMenuRow(rows, popup, R.string.launcher_settings, () -> startActivityForResult(
                 new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
-        SharedPreferences sp = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
-        String currentMode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_WEATHER);
-        int modeTextRes;
-        if (LauncherSettingsActivity.MODE_WEATHER.equals(currentMode)) {
-            modeTextRes = R.string.wallpaper_mode_weather;
-        } else if (LauncherSettingsActivity.MODE_BING.equals(currentMode)) {
-            modeTextRes = R.string.wallpaper_mode_bing;
-        } else {
-            modeTextRes = R.string.wallpaper_mode_off;
-        }
-        String rowLabel = getString(R.string.wallpaper_mode_label, getString(modeTextRes));
-        addSettingsMenuRow(rows, popup, rowLabel, () -> {
-            String nextMode;
-            int nextNameRes;
-            if (LauncherSettingsActivity.MODE_WEATHER.equals(currentMode)) {
-                nextMode = LauncherSettingsActivity.MODE_BING;
-                nextNameRes = R.string.wallpaper_mode_bing;
-            } else if (LauncherSettingsActivity.MODE_BING.equals(currentMode)) {
-                nextMode = LauncherSettingsActivity.MODE_OFF;
-                nextNameRes = R.string.wallpaper_mode_off;
-            } else {
-                nextMode = LauncherSettingsActivity.MODE_WEATHER;
-                nextNameRes = R.string.wallpaper_mode_weather;
-            }
-            sp.edit().putString("wallpaper_mode", nextMode)
-                    .putBoolean("bing_wallpaper", LauncherSettingsActivity.MODE_BING.equals(nextMode)).apply();
-            Toast.makeText(this, getString(R.string.wallpaper_switched_toast, getString(nextNameRes)), Toast.LENGTH_SHORT).show();
-            updateWeatherAndWallpaper();
-        });
         addSettingsMenuRow(rows, popup, R.string.system_settings, () -> open(systemIntent(Settings.ACTION_SETTINGS)));
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));
@@ -2164,8 +2135,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
         if (LauncherSettingsActivity.MODE_WEATHER.equals(mode)) {
             if (!wallpaperPlayer.hasWallpaper()) {
-                boolean isNight = WeatherManager.deduceFromClock() == WeatherManager.WeatherCondition.CLEAR_NIGHT;
-                wallpaperPlayer.setWallpaperResource(isNight ? R.drawable.wallpaper_night : R.drawable.wallpaper_default, 45);
+                wallpaperPlayer.setWallpaperResource(R.drawable.wallpaper_default, 45);
             }
             WeatherManager.fetch(this, force, info -> {
                 if (isFinishing() || isDestroyed()) return;
@@ -2207,9 +2177,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         String mode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_WEATHER);
         if (LauncherSettingsActivity.MODE_WEATHER.equals(mode)) {
             if (!wallpaperPlayer.hasWallpaper()) {
-                int res = (info.condition == WeatherManager.WeatherCondition.CLEAR_NIGHT)
-                        ? R.drawable.wallpaper_night : R.drawable.wallpaper_default;
-                wallpaperPlayer.setWallpaperResource(res, 45);
+                wallpaperPlayer.setWallpaperResource(R.drawable.wallpaper_default, 45);
             }
             WeatherWallpaper.fetch(this, info.condition, file -> {
                 if (isFinishing() || isDestroyed()) return;

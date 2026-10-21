@@ -76,8 +76,8 @@
     <string name="wallpaper_mode_off">默认极简主题</string>
     <string name="weather_particles_label">动态天气微粒子 (雨/雪/星芒)：%1$s</string>
     <string name="weather_city_label">天气城市：%1$s</string>
-    <string name="weather_city_auto">自动定位 (基于IP)</string>
-    <string name="weather_city_dialog_title">选择天气所在城市</string>
+    <string name="weather_city_auto">🌐 自动定位 (基于IP)</string>
+    <string name="weather_city_dialog_title">选择所在省份</string>
     <string name="all_apps">全部应用</string>
     <string name="all_apps_count_hint">共 %1$d 个应用 · 按返回键收起</string>
     <string name="dock_slot_title">设置常用应用 (槽位 %1$d)</string>
