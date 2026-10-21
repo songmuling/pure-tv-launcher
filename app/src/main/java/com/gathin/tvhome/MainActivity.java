@@ -316,9 +316,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         hiddenApps = new HashSet<>(cfg.hiddenApps);
 
         grid = findViewById(R.id.grid);
+        grid.setOverScrollMode(View.OVER_SCROLL_NEVER);
         rtlAppGrid = getResources().getBoolean(R.bool.rtl_app_grid);
         // Mirror only the app grid; the header and other locales keep their own layouts.
         grid.setLayoutManager(new GridLayoutManager(this, COLUMNS) {
+            @Override
+            public boolean canScrollVertically() {
+                return false;
+            }
+
             @Override
             protected boolean isLayoutRTL() {
                 return rtlAppGrid;
@@ -442,9 +448,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             open(systemIntent(Settings.ACTION_WIFI_SETTINGS));
             return true;
         });
-        btnSettings.setOnClickListener(v -> open(systemIntent(Settings.ACTION_SETTINGS)));
+        btnSettings.setOnClickListener(v -> showSettingsMenu());
         btnSettings.setOnLongClickListener(v -> {
-            showSettingsMenu();
+            open(systemIntent(Settings.ACTION_SETTINGS));
             return true;
         });
         btnReorder = findViewById(R.id.btnReorder);
@@ -1110,8 +1116,25 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         dialog.show();
     }
 
+    private void setDesktopForegroundVisible(boolean visible) {
+        float alpha = visible ? 1f : 0f;
+        int duration = 220;
+        View leftBlock = findViewById(R.id.leftBlock);
+        View topButtons = findViewById(R.id.topButtons);
+        View heroName = findViewById(R.id.heroName);
+        View glass = findViewById(R.id.glass);
+        if (leftBlock != null) leftBlock.animate().alpha(alpha).setDuration(duration).start();
+        if (topButtons != null) topButtons.animate().alpha(alpha).setDuration(duration).start();
+        if (grid != null) grid.animate().alpha(alpha).setDuration(duration).start();
+        if (btnAllApps != null) btnAllApps.animate().alpha(alpha).setDuration(duration).start();
+        if (heroName != null) heroName.animate().alpha(alpha).setDuration(duration).start();
+        if (glass != null) glass.animate().alpha(alpha).setDuration(duration).start();
+    }
+
     private void showAllApps() {
+        setDesktopForegroundVisible(false);
         AllAppsDialog dialog = new AllAppsDialog(this, animations, () -> {
+            setDesktopForegroundVisible(true);
             if (btnAllApps != null) btnAllApps.requestFocus();
         });
         dialog.show();
@@ -2095,18 +2118,23 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         String rowLabel = getString(R.string.wallpaper_mode_label, getString(modeTextRes));
         addSettingsMenuRow(rows, popup, rowLabel, () -> {
             String nextMode;
+            int nextNameRes;
             if (LauncherSettingsActivity.MODE_WEATHER.equals(currentMode)) {
                 nextMode = LauncherSettingsActivity.MODE_BING;
+                nextNameRes = R.string.wallpaper_mode_bing;
             } else if (LauncherSettingsActivity.MODE_BING.equals(currentMode)) {
                 nextMode = LauncherSettingsActivity.MODE_OFF;
+                nextNameRes = R.string.wallpaper_mode_off;
             } else {
                 nextMode = LauncherSettingsActivity.MODE_WEATHER;
+                nextNameRes = R.string.wallpaper_mode_weather;
             }
             sp.edit().putString("wallpaper_mode", nextMode)
                     .putBoolean("bing_wallpaper", LauncherSettingsActivity.MODE_BING.equals(nextMode)).apply();
+            Toast.makeText(this, getString(R.string.wallpaper_switched_toast, getString(nextNameRes)), Toast.LENGTH_SHORT).show();
             updateWeatherAndWallpaper();
         });
-        if (moduleCards) addSettingsMenuRow(rows, popup, R.string.module_cards, this::showModuleCards);
+        addSettingsMenuRow(rows, popup, R.string.system_settings, () -> open(systemIntent(Settings.ACTION_SETTINGS)));
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));
         // Hebrew puts Settings at the left of the header: grow the menu inward from it.
@@ -2136,12 +2164,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
 
         if (LauncherSettingsActivity.MODE_WEATHER.equals(mode)) {
+            if (!wallpaperPlayer.hasWallpaper()) {
+                boolean isNight = WeatherManager.deduceFromClock() == WeatherManager.WeatherCondition.CLEAR_NIGHT;
+                wallpaperPlayer.setWallpaperResource(isNight ? R.drawable.wallpaper_night : R.drawable.wallpaper_default, 45);
+            }
             WeatherManager.fetch(this, force, info -> {
                 if (isFinishing() || isDestroyed()) return;
                 applyWeather(info);
             });
         } else if (LauncherSettingsActivity.MODE_BING.equals(mode)) {
             if (weatherParticles != null) weatherParticles.setWeatherCondition(null);
+            if (!wallpaperPlayer.hasWallpaper()) {
+                wallpaperPlayer.setWallpaperResource(R.drawable.wallpaper_default, 45);
+            }
             BingWallpaper.fetch(this, file -> wallpaperPlayer.setWallpaper(file, 45));
             WeatherManager.fetch(this, force, info -> {
                 if (isFinishing() || isDestroyed()) return;
@@ -2172,6 +2207,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         SharedPreferences sp = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
         String mode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_WEATHER);
         if (LauncherSettingsActivity.MODE_WEATHER.equals(mode)) {
+            if (!wallpaperPlayer.hasWallpaper()) {
+                int res = (info.condition == WeatherManager.WeatherCondition.CLEAR_NIGHT)
+                        ? R.drawable.wallpaper_night : R.drawable.wallpaper_default;
+                wallpaperPlayer.setWallpaperResource(res, 45);
+            }
             WeatherWallpaper.fetch(this, info.condition, file -> {
                 if (isFinishing() || isDestroyed()) return;
                 wallpaperPlayer.setWallpaper(file, 45);

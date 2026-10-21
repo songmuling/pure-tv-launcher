@@ -113,9 +113,11 @@
     <string name="all_apps">All Apps</string>
     <string name="all_apps_count_hint">%1$d apps · Press Back to close</string>
     <string name="dock_slot_title">Set Dock App (Slot %1$d)</string>
-    <string name="dock_remove_app">【 Remove App (Reset to +) 】</string>
+    <string name="dock_remove_app">Remove from Dock</string>
     <string name="dock_removed_toast">Slot reset to +</string>
     <string name="dock_set_toast">\"%1$s\" set to Dock</string>
     <string name="dock_moved_toast">Moved \"%1$s\" to this slot</string>
     <string name="dock_swapped_toast">Swapped with slot %1$d</string>
+    <string name="wallpaper_switched_toast">Switched to: %1$s</string>
+    <string name="system_settings">TV System Settings</string>
 </resources>

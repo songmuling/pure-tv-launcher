@@ -81,9 +81,11 @@
     <string name="all_apps">全部应用</string>
     <string name="all_apps_count_hint">共 %1$d 个应用 · 按返回键收起</string>
     <string name="dock_slot_title">设置常用应用 (槽位 %1$d)</string>
-    <string name="dock_remove_app">【 移除此应用 (恢复为 + 号) 】</string>
+    <string name="dock_remove_app">从“Dock栏移除”</string>
     <string name="dock_removed_toast">已将该槽位恢复为 + 号</string>
     <string name="dock_set_toast">已将“%1$s”固定到该槽位</string>
     <string name="dock_moved_toast">已将“%1$s”移动到当前槽位</string>
     <string name="dock_swapped_toast">已与槽位 %1$d 互换位置</string>
+    <string name="wallpaper_switched_toast">已切换为：%1$s</string>
+    <string name="system_settings">电视系统设置</string>
 </resources>

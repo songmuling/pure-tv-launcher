@@ -243,6 +243,10 @@ final class WallpaperPlayer {
         }
     }
 
+    boolean hasWallpaper() {
+        return !currentFilePath.isEmpty() || currentResId > 0;
+    }
+
     void clearWallpaper() {
         currentResId = -1;
         currentFilePath = "";
