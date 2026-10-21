@@ -394,14 +394,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             int h = b - t;
             int inner = (r - l) - grid.getPaddingLeft() - grid.getPaddingRight();
             adapter.updateTileDimensions(inner, h, density);
-            int tileW = AppAdapter.tileWidthPx(inner, h, COLUMNS, 0, false, true, density);
-            int itemH = AppAdapter.itemHeightPx(AppAdapter.tileHeightPx(tileW), density);
-            int dockRow = itemH + (int) (AppAdapter.DOCK_EXTRA_DP * density);
-            int shelfClearance = heroName.getMeasuredHeight() + (int) (30 * density);
-            int want = Math.max(shelfClearance, h - dockRow - (int) (64 * density));
-            if (grid.getPaddingTop() != want) {
-                grid.setPadding(grid.getPaddingLeft(), want, grid.getPaddingRight(), grid.getPaddingBottom());
-            }
         });
 
         // Keep the glass glued to its tile while the grid scrolls.

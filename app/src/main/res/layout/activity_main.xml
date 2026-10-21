@@ -251,19 +251,27 @@
             </LinearLayout>
         </RelativeLayout>
 
-        <!-- The wrapper clips at the grid's edge; the grid itself must not clip so scaled tiles can overflow their cells. -->
-        <FrameLayout
+        <!-- 柔性空白占位区：将 Dock 栏自然推到屏幕下方，让上方动态风景壁纸呈现最大的通透感 -->
+        <Space
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:layout_marginTop="10dp">
+            android:layout_weight="1" />
+
+        <!-- Dock 常用应用栏容器：clipChildren="false" 确保毛玻璃两端圆弧与光晕无任何截断 -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false">
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/grid"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:paddingTop="10dp"
-                android:paddingBottom="40dp"
+                android:layout_height="wrap_content"
+                android:paddingStart="36dp"
+                android:paddingEnd="36dp"
+                android:paddingTop="14dp"
+                android:paddingBottom="14dp"
                 android:clipToPadding="false"
                 android:clipChildren="false"
                 android:overScrollMode="never"
@@ -271,15 +279,15 @@
                 android:descendantFocusability="afterDescendants" />
         </FrameLayout>
 
-        <!-- Apple TV 质感居中毛玻璃“全部应用”入口 -->
+        <!-- Apple TV 质感居中毛玻璃“全部应用”入口：紧随 Dock 栏正下方 -->
         <TextView
             android:id="@+id/btnAllApps"
             style="@style/TopButton"
             android:layout_width="wrap_content"
             android:layout_height="38dp"
             android:layout_gravity="center_horizontal"
-            android:layout_marginTop="6dp"
-            android:layout_marginBottom="14dp"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="24dp"
             android:paddingStart="22dp"
             android:paddingEnd="26dp"
             android:text="@string/all_apps"
