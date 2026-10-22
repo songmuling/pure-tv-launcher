@@ -284,10 +284,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         sky = findViewById(R.id.sky);
         sky.setIntensity(cfg.skyIntensity);
         ambient = findViewById(R.id.ambient);
-        if (ambient != null) ambient.setVisibility(View.GONE);
-        // The glow is one bitmap, so its alpha can be applied while drawing it. Otherwise every frame of
-        // a fade renders it into a full-screen offscreen buffer first.
-        ambient.forceHasOverlappingRendering(false);
+        if (ambient != null) {
+            ambient.setVisibility(View.GONE);
+            // The glow is one bitmap, so its alpha can be applied while drawing it. Otherwise every frame of
+            // a fade renders it into a full-screen offscreen buffer first.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                ambient.forceHasOverlappingRendering(false);
+            }
+        }
         heroName = findViewById(R.id.heroName);
         // dock_title false: the name above the dock never shows; the glow still follows the dock.
         if (!cfg.dockTitle) heroName.setVisibility(View.GONE);
@@ -474,11 +478,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
         if (tim != null) tim.registerCallback(inputCallback, handler);
         if (cm != null) {
-            cm.registerDefaultNetworkCallback(networkCallback);
-            cm.registerNetworkCallback(new NetworkRequest.Builder()
-                    .addTransportType(NetworkCapabilities.TRANSPORT_VPN)
-                    .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
-                    .build(), vpnCallback);
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    cm.registerDefaultNetworkCallback(networkCallback);
+                } else {
+                    cm.registerNetworkCallback(new NetworkRequest.Builder().build(), networkCallback);
+                }
+            } catch (Exception ignored) {}
+            try {
+                cm.registerNetworkCallback(new NetworkRequest.Builder()
+                        .addTransportType(NetworkCapabilities.TRANSPORT_VPN)
+                        .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+                        .build(), vpnCallback);
+            } catch (Exception ignored) {}
         }
         // Not after recreate(): the launch intent survives it and would open the settings again.
         if (savedInstanceState == null) openLauncherSettingsIfAsked(getIntent());
@@ -669,8 +681,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
         if (tim != null) tim.unregisterCallback(inputCallback);
         if (cm != null) {
-            cm.unregisterNetworkCallback(networkCallback);
-            cm.unregisterNetworkCallback(vpnCallback);
+            try {
+                cm.unregisterNetworkCallback(networkCallback);
+            } catch (Exception ignored) {}
+            try {
+                cm.unregisterNetworkCallback(vpnCallback);
+            } catch (Exception ignored) {}
         }
     }
 
