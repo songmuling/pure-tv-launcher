@@ -217,6 +217,8 @@
                     android:ellipsize="end"
                     android:text="@string/wifi"
                     android:drawableStart="@drawable/ic_wifi"
+                    android:visibility="gone"
+                    android:focusable="false"
                     android:nextFocusDown="@+id/grid" />
 
                 <TextView

@@ -300,6 +300,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         greeting = findViewById(R.id.greeting);
         greetingColor = greeting.getCurrentTextColor();
         btnWifi = findViewById(R.id.btnWifi);
+        if (btnWifi != null) {
+            btnWifi.setVisibility(View.GONE);
+            btnWifi.setFocusable(false);
+        }
         shamsiDate = findViewById(R.id.shamsiDate);
         stats = findViewById(R.id.stats);
         showStats = cfg.showStats;
@@ -443,7 +447,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 focusTile(lastFocused % COLUMNS);
                 return true;
             }
-            int firstButton = btnInputs.getVisibility() == View.VISIBLE ? R.id.btnInputs : R.id.btnWifi;
+            int firstButton = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? R.id.btnInputs : R.id.btnSettings;
             int leftButton = rtlMenuBar ? R.id.btnSettings : firstButton;
             int rightButton = rtlMenuBar ? firstButton : R.id.btnSettings;
             if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return v.getId() == leftButton;
@@ -1484,13 +1488,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 if (position >= 5) {
                     target = findViewById(R.id.btnSettings);
                     if (target == null || target.getVisibility() != View.VISIBLE) {
-                        target = btnWifi;
+                        target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs : null;
                     }
                 } else {
-                    target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs : btnWifi;
-                    if (target == null || target.getVisibility() != View.VISIBLE) {
-                        target = findViewById(R.id.btnSettings);
-                    }
+                    target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs : findViewById(R.id.btnSettings);
                 }
                 if (target != null && target.requestFocus()) {
                     grid.playSoundEffect(SoundEffectConstants.NAVIGATION_UP);
@@ -1518,7 +1519,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     @Override public void onLibraryUp() {
-        if (adapter.appCount() == 0) { btnWifi.requestFocus(); return; }
+        if (adapter.appCount() == 0) {
+            View target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs : findViewById(R.id.btnSettings);
+            if (target != null) target.requestFocus();
+            return;
+        }
         int lastRow = ((adapter.appCount() - 1) / COLUMNS) * COLUMNS;
         focusTile(Math.min(lastRow + lastFocused % COLUMNS, adapter.appCount() - 1));
     }
@@ -1574,7 +1579,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         cancelPendingFocusScroll();
         if (adapter.appCount() == 0) {
             if (adapter.isLibraryAt(0)) focusLibrary();
-            else btnWifi.requestFocus();
+            else {
+                View target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs : findViewById(R.id.btnSettings);
+                if (target != null) target.requestFocus();
+            }
             return;
         }
         final int pos = adapter.focusablePosition(Math.max(0, Math.min(position, adapter.appCount() - 1)));
@@ -2046,6 +2054,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         PopupWindow popup = glassPopup(panel, (int) (200 * density));
         addSettingsMenuRow(rows, popup, R.string.launcher_settings, () -> startActivityForResult(
                 new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
+        addSettingsMenuRow(rows, popup, R.string.network_settings, () -> open(systemIntent(Settings.ACTION_WIFI_SETTINGS)));
         addSettingsMenuRow(rows, popup, R.string.system_settings, () -> open(systemIntent(Settings.ACTION_SETTINGS)));
         panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
         popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));

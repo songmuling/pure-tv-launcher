@@ -87,4 +87,5 @@
     <string name="dock_swapped_toast">已与槽位 %1$d 互换位置</string>
     <string name="wallpaper_switched_toast">已切换为：%1$s</string>
     <string name="system_settings">电视系统设置</string>
+    <string name="network_settings">网络与 Wi-Fi 设置</string>
 </resources>
