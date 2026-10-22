@@ -176,7 +176,16 @@ final class AllAppsDialog extends Dialog {
         }
 
         Collator collator = Collator.getInstance();
-        appList.sort((a, b) -> collator.compare(a.label, b.label));
+        appList.sort((a, b) -> {
+            boolean aIsTv = a.banner != null;
+            boolean bIsTv = b.banner != null;
+            if (aIsTv != bIsTv) {
+                return aIsTv ? -1 : 1; // 电视原生大图标排在前面，非电视小图标排在后面
+            }
+            String la = a.label != null ? a.label : "";
+            String lb = b.label != null ? b.label : "";
+            return collator.compare(la, lb);
+        });
     }
 
     private Drawable loadBanner(PackageManager pm, ResolveInfo ri) {

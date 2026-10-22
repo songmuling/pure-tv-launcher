@@ -185,6 +185,11 @@ final class AppLibraryDialog {
         catalogTime = System.currentTimeMillis();
         Collator collator = Collator.getInstance();
         apps.sort((a, b) -> {
+            boolean aIsTv = tvPackages.contains(a.activityInfo.packageName);
+            boolean bIsTv = tvPackages.contains(b.activityInfo.packageName);
+            if (aIsTv != bIsTv) {
+                return aIsTv ? -1 : 1; // 电视应用优先排在前
+            }
             String pa = a.activityInfo.packageName, pb = b.activityInfo.packageName;
             int byLabel = collator.compare(label(a), label(b));
             return byLabel != 0 ? byLabel : pa.compareTo(pb);
