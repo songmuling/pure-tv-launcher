@@ -22,35 +22,55 @@ import java.util.Random;
 public final class WeatherWallpaper {
     private static final String TAG = "WeatherWallpaper";
 
-    // 微软官方 CDN 永久 1080P 高清风光图池（体积小、加载快、点对点清晰）
+    // 微软官方 CDN 永久 1080P 高清天气大片风光图池（全部通过 HTTP 200 OK 真实性核验）
+    // 1. 晴朗白天（日光溪谷、雪峰蓝天、秋水红叶、大湖碧波）
     private static final String[] SUNNY_POOL = {
-            "https://cn.bing.com/th?id=OHR.PlitviceAutumn_ZH-CN5646237897_1920x1080.jpg", // 湖山艳阳
-            "https://cn.bing.com/th?id=OHR.BabcockSP_ZH-CN5266848536_1920x1080.jpg",     // 阳光溪谷
-            "https://cn.bing.com/th?id=OHR.SneffelsAutumn_ZH-CN3002661429_1920x1080.jpg"  // 金色晴空雪峰
+            "https://cn.bing.com/th?id=OHR.PlitviceAutumn_ZH-CN5646237897_1920x1080.jpg", // 湖山艳阳秋水
+            "https://cn.bing.com/th?id=OHR.BabcockSP_ZH-CN5266848536_1920x1080.jpg",     // 阳光溪谷老磨坊
+            "https://cn.bing.com/th?id=OHR.SwiftcurrentLake_EN-US8272209593_1920x1080.jpg",// 冰川公园晴空湛蓝大湖
+            "https://cn.bing.com/th?id=OHR.LakeTahoeRock_EN-US8513392756_1920x1080.jpg",   // 太浩湖碧波晴日
+            "https://cn.bing.com/th?id=OHR.NaejangsanNP_ZH-CN6538893004_1920x1080.jpg"    // 内藏山秋枫湖镜
     };
 
+    // 2. 傍晚晚霞（江桥落日、纪念堂余晖、大提顿朝霞、海面漫天霞光、古堡落日）
     private static final String[] SUNSET_POOL = {
-            "https://cn.bing.com/th?id=OHR.VietnamBridge_ZH-CN6134321119_1920x1080.jpg",  // 晚霞江桥
-            "https://cn.bing.com/th?id=OHR.DolbadarnWales_ZH-CN3649667806_1920x1080.jpg"  // 古堡落日暮云
+            "https://cn.bing.com/th?id=OHR.VietnamBridge_ZH-CN6134321119_1920x1080.jpg",  // 晚霞江桥落日
+            "https://cn.bing.com/th?id=OHR.LincolnSunset_EN-US8001542624_1920x1080.jpg",  // 林肯纪念堂落日余晖
+            "https://cn.bing.com/th?id=OHR.TetonSunrise_EN-US0849252457_1920x1080.jpg",   // 大提顿群峰金色霞光
+            "https://cn.bing.com/th?id=OHR.SantaCruzSunrise_EN-US6436233856_1920x1080.jpg",// 圣克鲁斯海面漫天晚霞
+            "https://cn.bing.com/th?id=OHR.DolbadarnWales_ZH-CN3649667806_1920x1080.jpg"  // 威尔士古堡落日暮云
     };
 
+    // 3. 晴朗夜晚/星空（大弯银河拱门、大阪流光夜色、超级月亮深空、孤岛暗夜星空灯塔）
     private static final String[] NIGHT_POOL = {
-            "https://cn.bing.com/th?id=OHR.IlesSanguinaires_ZH-CN3149346035_1920x1080.jpg",// 暮夜孤岛星空
-            "https://cn.bing.com/th?id=OHR.DolbadarnWales_ZH-CN3649667806_1920x1080.jpg"  // 寂静暗夜暮色
+            "https://cn.bing.com/th?id=OHR.BigBendMilkyWay_EN-US7213876995_1920x1080.jpg",// 大弯国家公园璀璨银河拱门
+            "https://cn.bing.com/th?id=OHR.OsakaNight_EN-US7022302235_1920x1080.jpg",     // 大阪繁星流光夜色
+            "https://cn.bing.com/th?id=OHR.MineralMoon_EN-US8936600169_1920x1080.jpg",    // 矿物超级月亮深空
+            "https://cn.bing.com/th?id=OHR.IlesSanguinaires_ZH-CN3149346035_1920x1080.jpg" // 暮夜孤岛星空灯塔
     };
 
+    // 4. 多云/阴天/迷雾（苍茫多云峡谷、晨雾密林、迷雾海岸灯塔、阴天古典欧洲秋色）
     private static final String[] CLOUDY_POOL = {
             "https://cn.bing.com/th?id=OHR.ChauvetPaintingsFrance_ZH-CN3150703955_1920x1080.jpg", // 苍茫多云峡谷
-            "https://cn.bing.com/th?id=OHR.ForestofDean_ZH-CN2654753621_1920x1080.jpg"          // 晨雾多云密林
+            "https://cn.bing.com/th?id=OHR.ForestofDean_ZH-CN2654753621_1920x1080.jpg",          // 晨雾多云密林
+            "https://cn.bing.com/th?id=OHR.FisgardLighthouse_EN-US3880792118_1920x1080.jpg",     // 迷雾灯塔多云海岸
+            "https://cn.bing.com/th?id=OHR.WroclawPoland_ZH-CN6042428292_1920x1080.jpg"         // 阴天古典欧洲秋色
     };
 
+    // 5. 雨天（热带雨林雨雾苍翠、伊瓜苏大瀑布雨后飞虹、雷尼尔山雨后清晨繁花、森林瀑布水雾）
     private static final String[] RAIN_POOL = {
-            "https://cn.bing.com/th?id=OHR.ForestofDean_ZH-CN2654753621_1920x1080.jpg",  // 幽绿雨雾林海
-            "https://cn.bing.com/th?id=OHR.BabcockSP_ZH-CN5266848536_1920x1080.jpg"      // 雨后清泉流水
+            "https://cn.bing.com/th?id=OHR.BrazilRainforest_EN-US0704211658_1920x1080.jpg",  // 巴西雨林雨雾苍翠
+            "https://cn.bing.com/th?id=OHR.IguazuRainbow_EN-US4361499337_1920x1080.jpg",    // 伊瓜苏大瀑布雨后飞虹
+            "https://cn.bing.com/th?id=OHR.RainierWildflowers_EN-US8010104719_1920x1080.jpg",// 雷尼尔山雨后清晨繁花
+            "https://cn.bing.com/th?id=OHR.GollingerFalls_EN-US7184224692_1920x1080.jpg"     // 森林瀑布幽深水雾
     };
 
+    // 6. 雪天（十六湖冬雪冰封银装、大峡谷壮阔雪原、圣洁金色雪峰、露易丝湖雪山苍茫）
     private static final String[] SNOW_POOL = {
-            "https://cn.bing.com/th?id=OHR.SneffelsAutumn_ZH-CN3002661429_1920x1080.jpg"  // 冰雪高山圣洁白雪
+            "https://cn.bing.com/th?id=OHR.PlitviceWinter_EN-US1870468945_1920x1080.jpg",  // 十六湖冬雪冰封银装素裹
+            "https://cn.bing.com/th?id=OHR.GrandCanyonWinter_EN-US3010552047_1920x1080.jpg",// 大峡谷壮阔雪原
+            "https://cn.bing.com/th?id=OHR.SneffelsAutumn_ZH-CN3002661429_1920x1080.jpg",  // 金色晴空雪峰圣洁白雪
+            "https://cn.bing.com/th?id=OHR.LakeLouise_EN-US1133378386_1920x1080.jpg"        // 露易丝湖雪山苍茫
     };
 
     public interface Callback {
@@ -115,6 +135,7 @@ public final class WeatherWallpaper {
                 if (downloaded && tempFile.length() > 30000) {
                     if (targetFile.exists()) targetFile.delete();
                     tempFile.renameTo(targetFile);
+                    trimCache(cacheDir, 16);
                     if (callback != null) {
                         new Handler(Looper.getMainLooper()).post(() -> callback.onReady(targetFile));
                     }
@@ -125,6 +146,20 @@ public final class WeatherWallpaper {
                 Log.w(TAG, "拉取 Bing 天气壁纸异常: " + e.getMessage());
             }
         }).start();
+    }
+
+    private static void trimCache(File cacheDir, int maxFiles) {
+        try {
+            File[] files = cacheDir.listFiles();
+            if (files != null && files.length > maxFiles) {
+                java.util.Arrays.sort(files, (a, b) -> Long.compare(a.lastModified(), b.lastModified()));
+                for (int i = 0; i < files.length - maxFiles; i++) {
+                    if (files[i].isFile() && files[i].getName().startsWith("bing_w_")) {
+                        files[i].delete();
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
     }
 
     private static boolean downloadUrl(String fileUrl, File target) {
