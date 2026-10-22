@@ -58,6 +58,8 @@ import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.TextView;
 import android.app.AlertDialog;
+import com.gathin.tvhome.profile.TvProfile;
+import com.gathin.tvhome.profile.TvProfileManager;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
 import android.content.pm.PackageManager;
@@ -1768,30 +1770,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * On firmware with a standard settings handler the behaviour is unchanged.
      */
     private Intent systemIntent(String standardAction) {
+        TvProfile profile = TvProfileManager.getProfile(this);
         if (android.provider.Settings.ACTION_SETTINGS.equals(standardAction)) {
-            // 创维盒子专版设置
-            Intent skyworth = new Intent().setComponent(new ComponentName(
-                    "com.skyworthdigital.settings", "com.skyworthdigital.settings.activity.MainActivity"));
-            if (skyworth.resolveActivity(getPackageManager()) != null) return skyworth;
-
-            // 小米电视专版系统设置
-            Intent xiaomi = new Intent("com.xiaomi.mitv.settings.SETTINGS");
-            if (xiaomi.resolveActivity(getPackageManager()) != null) return xiaomi;
-            xiaomi = new Intent(Intent.ACTION_MAIN).setComponent(new ComponentName(
-                    "com.xiaomi.mitv.settings", "com.xiaomi.mitv.settings.entry.MainActivity"));
-            if (xiaomi.resolveActivity(getPackageManager()) != null) return xiaomi;
+            Intent custom = profile.getSettingsIntent(this);
+            if (custom != null && custom.resolveActivity(getPackageManager()) != null) return custom;
         } else if (android.provider.Settings.ACTION_WIFI_SETTINGS.equals(standardAction)) {
-            // 小米电视网络设置
-            Intent miWifi = new Intent("com.xiaomi.mitv.settings.WIFI_SETTINGS");
-            if (miWifi.resolveActivity(getPackageManager()) != null) return miWifi;
+            Intent custom = profile.getWifiSettingsIntent(this);
+            if (custom != null && custom.resolveActivity(getPackageManager()) != null) return custom;
         }
         Intent i = new Intent(standardAction);
         if (i.resolveActivity(getPackageManager()) != null) return i;
-        i = new Intent("com.xiaomi.mitv.settings.SETTINGS");
-        if (i.resolveActivity(getPackageManager()) != null) return i;
-        i = new Intent(Intent.ACTION_MAIN).setComponent(new ComponentName(
-                "com.xiaomi.mitv.settings", "com.xiaomi.mitv.settings.entry.MainActivity"));
-        if (i.resolveActivity(getPackageManager()) != null) return i;
+        // Fallback to profile custom settings if standard action fails
+        Intent fallback = profile.getSettingsIntent(this);
+        if (fallback != null && fallback.resolveActivity(getPackageManager()) != null) return fallback;
         return new Intent(standardAction);   // nothing found: let open() show the can't-open toast
     }
 
@@ -1813,13 +1804,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 }
             } catch (Throwable ignored) {}
         }
-        // 小米电视专属检测：若包含小米电视播放器或系统设置，确保显示输入源胶囊
-        if (!any) {
-            Intent miTvPlayer = new Intent().setComponent(new ComponentName(
-                    "com.xiaomi.mitv.tvplayer", "com.xiaomi.mitv.tvplayer.ExternalSourceActivity"));
-            if (miTvPlayer.resolveActivity(getPackageManager()) != null) {
-                any = true;
-            }
+        // 厂商专属策略判断是否显示输入源按键（如小米电视/带HDMI直达面板的设备）
+        if (!any && TvProfileManager.getProfile(this).shouldShowInputsPill(this)) {
+            any = true;
         }
         btnInputs.setVisibility(any ? View.VISIBLE : View.GONE);
     }
@@ -1949,12 +1936,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                         () -> openInput(id));
             }
         }
-        // 小米电视专属：直达小米官方信号源面板与播放器
-        Intent miInput = new Intent().setComponent(new ComponentName(
-                "com.xiaomi.mitv.settings", "com.xiaomi.mitv.settings.entry.MainActivity"));
-        if (miInput.resolveActivity(getPackageManager()) != null) {
+        // 厂商专属信号源面板直达（通过 TvProfile 解耦）
+        Intent customInput = TvProfileManager.getProfile(this).getCustomInputsPanelIntent(this);
+        if (customInput != null && customInput.resolveActivity(getPackageManager()) != null) {
             if (rows.getChildCount() > 0) addSeparator(rows);
-            addInputRow(rows, popup, R.drawable.ic_input, "信号源切换面板", -1, () -> open(miInput));
+            addInputRow(rows, popup, R.drawable.ic_input, "信号源切换面板", -1, () -> open(customInput));
         }
         // Nothing to list where there is no TvInputManager: the TV's own source panel switches inputs.
         if (rows.getChildCount() == 0 && !sourcePanelService.isEmpty()) {
