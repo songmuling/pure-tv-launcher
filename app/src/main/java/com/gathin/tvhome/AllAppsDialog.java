@@ -240,11 +240,14 @@ final class AllAppsDialog extends Dialog {
             holder.name.setVisibility(View.GONE);
 
             if (item.banner != null) {
+                holder.card.setBackgroundResource(R.drawable.tile_bg);
                 holder.banner.setImageDrawable(item.banner);
                 holder.banner.setVisibility(View.VISIBLE);
                 holder.icon.setVisibility(View.GONE);
                 holder.label.setVisibility(View.GONE);
             } else {
+                holder.card.setBackground(ArtisticCardHelper.getCardBackground(activity, item.pkg, item.icon));
+                holder.banner.setImageDrawable(null);
                 holder.banner.setVisibility(View.GONE);
                 holder.icon.setImageDrawable(item.icon);
                 holder.icon.setVisibility(View.VISIBLE);

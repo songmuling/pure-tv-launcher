@@ -396,6 +396,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         if (e.kind == Entry.EMPTY) {
             h.card.setVisibility(View.VISIBLE);
             h.card.setFocusable(true);
+            h.card.setBackgroundResource(R.drawable.tile_bg);
             if (h.plusIcon != null) h.plusIcon.setVisibility(View.VISIBLE);
             h.banner.setVisibility(View.GONE);
             h.icon.setVisibility(View.GONE);
@@ -433,11 +434,13 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         h.banner.setScaleX(1f);
         h.banner.setScaleY(1f);
         if (e.banner != null) {
+            h.card.setBackgroundResource(R.drawable.tile_bg);
             h.banner.setImageDrawable(e.banner);
             h.banner.setVisibility(View.VISIBLE);
             h.icon.setVisibility(View.GONE);
             h.label.setVisibility(View.GONE);
         } else {
+            h.card.setBackground(ArtisticCardHelper.getCardBackground(ctx, e.pkg, e.icon));
             h.banner.setImageDrawable(null);
             h.banner.setVisibility(View.GONE);
             h.icon.setImageDrawable(e.icon);
