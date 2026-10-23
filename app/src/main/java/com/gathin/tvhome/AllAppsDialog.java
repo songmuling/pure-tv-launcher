@@ -1,9 +1,14 @@
 package com.gathin.tvhome;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
@@ -11,7 +16,9 @@ import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -20,9 +27,9 @@ import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.GridLayoutManager;
@@ -38,8 +45,9 @@ import java.util.Set;
 
 /**
  * 全屏“全部应用”抽屉 Dialog
- * 1. 采用 6 列自适应网格展示所有已安装应用
- * 2. 纯粹只负责浏览与启动，点击直接打开，按返回键无缝缩回
+ * 1. 采用 6 列自适应网格展示所有已安装应用（电视原生大图标在前，非电视应用在后）
+ * 2. 顶部 Header 动态联动展示当前光标聚焦的应用名称与操作提示
+ * 3. 支持长按呼出管理弹窗（卸载应用、应用信息），卸载后自动刷新列表
  */
 final class AllAppsDialog extends Dialog {
 
@@ -52,6 +60,8 @@ final class AllAppsDialog extends Dialog {
     private final Callback callback;
     private final List<AppItem> appList = new ArrayList<>();
     private final Set<String> leanbackPackages = new HashSet<>();
+    private TextView focusedNameView;
+    private AllAppsAdapter adapter;
 
     static class AppItem {
         final String label;
@@ -88,15 +98,21 @@ final class AllAppsDialog extends Dialog {
             window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
         }
 
+        focusedNameView = findViewById(R.id.allAppsFocusedName);
+
         loadInstalledApps();
 
         RecyclerView grid = findViewById(R.id.allAppsGrid);
         if (grid != null) {
             grid.setLayoutManager(new GridLayoutManager(activity, 6));
-            grid.setAdapter(new AllAppsAdapter());
+            adapter = new AllAppsAdapter();
+            grid.setAdapter(adapter);
             grid.post(() -> {
                 if (grid.getChildCount() > 0) {
                     grid.getChildAt(0).requestFocus();
+                    if (!appList.isEmpty() && focusedNameView != null) {
+                        focusedNameView.setText("· " + appList.get(0).label);
+                    }
                 }
             });
         }
@@ -106,11 +122,21 @@ final class AllAppsDialog extends Dialog {
         });
     }
 
-    private final android.content.BroadcastReceiver homeReceiver = new android.content.BroadcastReceiver() {
+    private final BroadcastReceiver homeReceiver = new BroadcastReceiver() {
         @Override
-        public void onReceive(android.content.Context context, Intent intent) {
+        public void onReceive(Context context, Intent intent) {
             if (Intent.ACTION_CLOSE_SYSTEM_DIALOGS.equals(intent.getAction())) {
                 dismiss();
+            }
+        }
+    };
+
+    private final BroadcastReceiver packageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            loadInstalledApps();
+            if (adapter != null) {
+                adapter.notifyDataSetChanged();
             }
         }
     };
@@ -119,7 +145,15 @@ final class AllAppsDialog extends Dialog {
     protected void onStart() {
         super.onStart();
         try {
-            activity.registerReceiver(homeReceiver, new android.content.IntentFilter(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
+            activity.registerReceiver(homeReceiver, new IntentFilter(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
+        } catch (Exception ignored) {}
+
+        try {
+            IntentFilter pkgFilter = new IntentFilter();
+            pkgFilter.addAction(Intent.ACTION_PACKAGE_REMOVED);
+            pkgFilter.addAction(Intent.ACTION_PACKAGE_ADDED);
+            pkgFilter.addDataScheme("package");
+            activity.registerReceiver(packageReceiver, pkgFilter);
         } catch (Exception ignored) {}
     }
 
@@ -128,6 +162,9 @@ final class AllAppsDialog extends Dialog {
         super.onStop();
         try {
             activity.unregisterReceiver(homeReceiver);
+        } catch (Exception ignored) {}
+        try {
+            activity.unregisterReceiver(packageReceiver);
         } catch (Exception ignored) {}
     }
 
@@ -207,6 +244,64 @@ final class AllAppsDialog extends Dialog {
         return width <= 0 || height <= 0 || width >= height * 1.4f;
     }
 
+    private boolean isSystemApp(String pkg) {
+        try {
+            ApplicationInfo ai = activity.getPackageManager().getApplicationInfo(pkg, 0);
+            return (ai.flags & ApplicationInfo.FLAG_SYSTEM) != 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void showAppActionDialog(AppItem item) {
+        boolean isSystem = isSystemApp(item.pkg);
+        List<String> options = new ArrayList<>();
+        if (!isSystem) {
+            options.add(activity.getString(R.string.all_apps_uninstall));
+        }
+        options.add(activity.getString(R.string.all_apps_details));
+
+        new AlertDialog.Builder(activity)
+                .setTitle(item.label)
+                .setItems(options.toArray(new CharSequence[0]), (d, which) -> {
+                    String selected = options.get(which);
+                    if (selected.equals(activity.getString(R.string.all_apps_uninstall))) {
+                        requestUninstall(item.pkg);
+                    } else if (selected.equals(activity.getString(R.string.all_apps_details))) {
+                        openAppDetails(item.pkg);
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void requestUninstall(String pkg) {
+        try {
+            Intent intent = new Intent(Intent.ACTION_UNINSTALL_PACKAGE);
+            intent.setData(Uri.parse("package:" + pkg));
+            intent.putExtra(Intent.EXTRA_RETURN_RESULT, true);
+            activity.startActivity(intent);
+        } catch (Exception e) {
+            try {
+                Intent deleteIntent = new Intent(Intent.ACTION_DELETE, Uri.parse("package:" + pkg));
+                activity.startActivity(deleteIntent);
+            } catch (Exception ex) {
+                Toast.makeText(activity, R.string.not_available, Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void openAppDetails(String pkg) {
+        try {
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            intent.setData(Uri.parse("package:" + pkg));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            activity.startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(activity, R.string.not_available, Toast.LENGTH_SHORT).show();
+        }
+    }
+
     private class AllAppsAdapter extends RecyclerView.Adapter<AllAppsHolder> {
 
         @NonNull
@@ -267,6 +362,24 @@ final class AllAppsDialog extends Dialog {
                     dismiss();
                 } catch (Exception ignored) {}
             });
+
+            holder.card.setOnLongClickListener(v -> {
+                showAppActionDialog(item);
+                return true;
+            });
+
+            holder.card.setOnFocusChangeListener((v, hasFocus) -> {
+                float scale = hasFocus ? 1.10f : 1.0f;
+                if (animations) {
+                    holder.card.animate().scaleX(scale).scaleY(scale).translationZ(hasFocus ? 8f : 0f).setDuration(160).start();
+                } else {
+                    holder.card.setScaleX(scale);
+                    holder.card.setScaleY(scale);
+                }
+                if (hasFocus && focusedNameView != null) {
+                    focusedNameView.setText("· " + item.label);
+                }
+            });
         }
 
         @Override
@@ -298,18 +411,7 @@ final class AllAppsDialog extends Dialog {
                 }
             });
             card.setClipToOutline(true);
-
             card.setFocusable(true);
-            card.setOnFocusChangeListener((v, hasFocus) -> {
-                float scale = hasFocus ? 1.10f : 1.0f;
-                if (animations) {
-                    card.animate().scaleX(scale).scaleY(scale).translationZ(hasFocus ? 8f : 0f).setDuration(160).start();
-                } else {
-                    card.setScaleX(scale);
-                    card.setScaleY(scale);
-                }
-                name.animate().alpha(hasFocus ? 1f : 0.6f).setDuration(160).start();
-            });
         }
     }
 }

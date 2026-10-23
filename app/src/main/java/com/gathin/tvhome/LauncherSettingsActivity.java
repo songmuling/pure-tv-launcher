@@ -122,7 +122,7 @@ public final class LauncherSettingsActivity extends Activity {
             open(new Intent(Settings.ACTION_HOME_SETTINGS));
         });
         refresh();
-        columnChoices[Math.max(0, Math.min(columns - 4, 3))].requestFocus();
+        animationsChoice.requestFocus();
     }
 
     private void showCityDialog() {
@@ -223,9 +223,15 @@ public final class LauncherSettingsActivity extends Activity {
         advancedChoice.setEnabled(animations);
         advancedChoice.setAlpha(animations ? 1f : 0.5f);
 
-        wallpaperModeWeather.setSelected(MODE_WEATHER.equals(wallpaperMode));
-        wallpaperModeBing.setSelected(MODE_BING.equals(wallpaperMode));
-        wallpaperModeOff.setSelected(MODE_OFF.equals(wallpaperMode));
+        boolean isWeather = MODE_WEATHER.equals(wallpaperMode);
+        boolean isBing = MODE_BING.equals(wallpaperMode);
+        boolean isOff = MODE_OFF.equals(wallpaperMode);
+        wallpaperModeWeather.setSelected(isWeather);
+        wallpaperModeBing.setSelected(isBing);
+        wallpaperModeOff.setSelected(isOff);
+        wallpaperModeWeather.setText((isWeather ? "🔘 " : "⚪ ") + getString(R.string.wallpaper_mode_weather));
+        wallpaperModeBing.setText((isBing ? "🔘 " : "⚪ ") + getString(R.string.wallpaper_mode_bing));
+        wallpaperModeOff.setText((isOff ? "🔘 " : "⚪ ") + getString(R.string.wallpaper_mode_off));
 
         weatherCityChoice.setEnabled(true);
         weatherCityChoice.setAlpha(1.0f);

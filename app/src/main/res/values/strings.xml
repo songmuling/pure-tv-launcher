@@ -118,7 +118,10 @@
     <string name="dock_set_toast">\"%1$s\" set to Dock</string>
     <string name="dock_moved_toast">Moved \"%1$s\" to this slot</string>
     <string name="dock_swapped_toast">Swapped with slot %1$d</string>
-    <string name="wallpaper_switched_toast">Switched to: %1$s</string>
     <string name="system_settings">TV System Settings</string>
     <string name="network_settings">Network &amp; Wi-Fi Settings</string>
+    <string name="all_apps_action_hint">[OK] Open  ·  [Hold] Manage &amp; Uninstall</string>
+    <string name="all_apps_uninstall">Uninstall App</string>
+    <string name="all_apps_details">App Info</string>
+    <string name="all_apps_system_toast">System app cannot be uninstalled</string>
 </resources>

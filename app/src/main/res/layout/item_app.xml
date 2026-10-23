@@ -29,15 +29,15 @@
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:gravity="center"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingTop="8dp"
-            android:paddingBottom="8dp">
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp">
 
             <ImageView
                 android:id="@+id/icon"
-                android:layout_width="52dp"
-                android:layout_height="52dp"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
                 android:layout_gravity="center_horizontal"
                 android:visibility="gone"
                 android:contentDescription="@null" />
@@ -46,12 +46,12 @@
                 android:id="@+id/label"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="3dp"
                 android:gravity="center"
                 android:singleLine="true"
                 android:ellipsize="end"
                 android:textColor="#F2FFFFFF"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:fontFamily="@font/outfit_medium"
                 android:visibility="gone" />
         </LinearLayout>

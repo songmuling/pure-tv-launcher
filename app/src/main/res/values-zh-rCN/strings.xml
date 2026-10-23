@@ -86,7 +86,10 @@
     <string name="dock_set_toast">已将“%1$s”固定到该槽位</string>
     <string name="dock_moved_toast">已将“%1$s”移动到当前槽位</string>
     <string name="dock_swapped_toast">已与槽位 %1$d 互换位置</string>
-    <string name="wallpaper_switched_toast">已切换为：%1$s</string>
     <string name="system_settings">电视系统设置</string>
     <string name="network_settings">网络与 Wi-Fi 设置</string>
+    <string name="all_apps_action_hint">[OK] 打开应用  ·  [长按] 卸载与管理</string>
+    <string name="all_apps_uninstall">卸载此应用</string>
+    <string name="all_apps_details">应用信息</string>
+    <string name="all_apps_system_toast">该应用为系统内置应用，无法卸载</string>
 </resources>
