@@ -352,7 +352,7 @@ public class AppAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             if (width > 0) {
                 inner = width - parent.getPaddingLeft() - parent.getPaddingRight();
             } else {
-                int totalPad = Math.round((56 * 2 + 36 * 2) * density);
+                int totalPad = Math.round((56 * 2 + 20 * 2) * density);
                 inner = parent.getResources().getDisplayMetrics().widthPixels - totalPad;
             }
             cachedTileW = tileWidthPx(inner, parent.getHeight(), DockManager.DOCK_SIZE, 0, false, true, density);

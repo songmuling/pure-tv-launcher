@@ -229,9 +229,9 @@ public final class LauncherSettingsActivity extends Activity {
         wallpaperModeWeather.setSelected(isWeather);
         wallpaperModeBing.setSelected(isBing);
         wallpaperModeOff.setSelected(isOff);
-        wallpaperModeWeather.setText((isWeather ? "🔘 " : "⚪ ") + getString(R.string.wallpaper_mode_weather));
-        wallpaperModeBing.setText((isBing ? "🔘 " : "⚪ ") + getString(R.string.wallpaper_mode_bing));
-        wallpaperModeOff.setText((isOff ? "🔘 " : "⚪ ") + getString(R.string.wallpaper_mode_off));
+        wallpaperModeWeather.setText((isWeather ? "● " : "○ ") + getString(R.string.wallpaper_mode_weather));
+        wallpaperModeBing.setText((isBing ? "● " : "○ ") + getString(R.string.wallpaper_mode_bing));
+        wallpaperModeOff.setText((isOff ? "● " : "○ ") + getString(R.string.wallpaper_mode_off));
 
         weatherCityChoice.setEnabled(true);
         weatherCityChoice.setAlpha(1.0f);

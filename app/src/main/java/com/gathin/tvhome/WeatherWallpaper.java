@@ -41,11 +41,11 @@ public final class WeatherWallpaper {
             "https://cn.bing.com/th?id=OHR.DolbadarnWales_ZH-CN3649667806_1920x1080.jpg"  // 威尔士古堡落日暮云
     };
 
-    // 3. 晴朗夜晚/星空（大弯银河拱门、大阪流光夜色、超级月亮深空、孤岛暗夜星空灯塔）
+    // 3. 晴朗夜晚/星空（大弯银河拱门、大阪流光夜色、冰岛极光古堡、孤岛暗夜星空灯塔）
     private static final String[] NIGHT_POOL = {
             "https://cn.bing.com/th?id=OHR.BigBendMilkyWay_EN-US7213876995_1920x1080.jpg",// 大弯国家公园璀璨银河拱门
             "https://cn.bing.com/th?id=OHR.OsakaNight_EN-US7022302235_1920x1080.jpg",     // 大阪繁星流光夜色
-            "https://cn.bing.com/th?id=OHR.MineralMoon_EN-US8936600169_1920x1080.jpg",    // 矿物超级月亮深空
+            "https://cn.bing.com/th?id=OHR.AurorasIceland_ZH-CN9781322454_1920x1080.jpg",  // 冰岛极光倒映与古堡夜色
             "https://cn.bing.com/th?id=OHR.IlesSanguinaires_ZH-CN3149346035_1920x1080.jpg" // 暮夜孤岛星空灯塔
     };
 
@@ -57,9 +57,9 @@ public final class WeatherWallpaper {
             "https://cn.bing.com/th?id=OHR.WroclawPoland_ZH-CN6042428292_1920x1080.jpg"         // 阴天古典欧洲秋色
     };
 
-    // 5. 雨天（热带雨林雨雾苍翠、伊瓜苏大瀑布雨后飞虹、雷尼尔山雨后清晨繁花、森林瀑布水雾）
+    // 5. 雨天（查图加河清溪水雾秋叶、伊瓜苏大瀑布雨后飞虹、雷尼尔山雨后清晨繁花、森林瀑布水雾）
     private static final String[] RAIN_POOL = {
-            "https://cn.bing.com/th?id=OHR.BrazilRainforest_EN-US0704211658_1920x1080.jpg",  // 巴西雨林雨雾苍翠
+            "https://cn.bing.com/th?id=OHR.ChattoogaRiver_ZH-CN9453791496_1920x1080.jpg", // 查图加河清溪水雾秋叶
             "https://cn.bing.com/th?id=OHR.IguazuRainbow_EN-US4361499337_1920x1080.jpg",    // 伊瓜苏大瀑布雨后飞虹
             "https://cn.bing.com/th?id=OHR.RainierWildflowers_EN-US8010104719_1920x1080.jpg",// 雷尼尔山雨后清晨繁花
             "https://cn.bing.com/th?id=OHR.GollingerFalls_EN-US7184224692_1920x1080.jpg"     // 森林瀑布幽深水雾
