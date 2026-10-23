@@ -13,6 +13,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Calendar;
+import java.util.Locale;
 
 /**
  * 零权限、零成本天气管理模块
@@ -71,7 +72,9 @@ public final class WeatherManager {
     public static WeatherInfo getLatest(Context context) {
         if (cachedInfo != null) return cachedInfo;
         SharedPreferences sp = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        String city = sp.getString("city", "");
+        String customCity = sp.getString("custom_city", "");
+        String city = !customCity.isEmpty() ? customCity : sp.getString("city", "");
+        if (city.isEmpty()) city = getDefaultCityName();
         int temp = sp.getInt("temp", 20);
         String condStr = sp.getString("condition", "");
         String desc = sp.getString("desc", "");
@@ -133,36 +136,24 @@ public final class WeatherManager {
         new Thread(() -> {
             WeatherInfo result = null;
             try {
-                // 1. 获取城市经纬度（优先使用用户手动设置的城市，避免翻墙 IP 偏差；否则自动 IP 检测）
+                // 1. 获取城市经纬度（优先使用用户手动设置的城市；否则自动双通道 IP 检测；最后保底默认城市）
                 String customCity = sp.getString("custom_city", "");
-                String city = customCity;
-                double lat = 31.23, lon = 121.47; // 默认备用经纬度 (上海)
+                String city;
+                double lat = 39.905, lon = 116.4053; // 默认备用经纬度 (北京)
 
                 if (!customCity.isEmpty()) {
-                    lat = Double.longBitsToDouble(sp.getLong("custom_lat", Double.doubleToLongBits(31.23)));
-                    lon = Double.longBitsToDouble(sp.getLong("custom_lon", Double.doubleToLongBits(121.47)));
+                    city = customCity;
+                    lat = Double.longBitsToDouble(sp.getLong("custom_lat", Double.doubleToLongBits(39.905)));
+                    lon = Double.longBitsToDouble(sp.getLong("custom_lon", Double.doubleToLongBits(116.4053)));
                 } else {
-                    try {
-                        URL geoUrl = new URL("http://ip-api.com/json/?fields=status,city,lat,lon");
-                        HttpURLConnection geoConn = (HttpURLConnection) geoUrl.openConnection();
-                        geoConn.setConnectTimeout(4000);
-                        geoConn.setReadTimeout(4000);
-                        if (geoConn.getResponseCode() == 200) {
-                            BufferedReader r = new BufferedReader(new InputStreamReader(geoConn.getInputStream()));
-                            StringBuilder sb = new StringBuilder();
-                            String line;
-                            while ((line = r.readLine()) != null) sb.append(line);
-                            r.close();
-                            JSONObject geoJson = new JSONObject(sb.toString());
-                            if ("success".equalsIgnoreCase(geoJson.optString("status"))) {
-                                city = geoJson.optString("city", city);
-                                lat = geoJson.optDouble("lat", lat);
-                                lon = geoJson.optDouble("lon", lon);
-                            }
-                        }
-                        geoConn.disconnect();
-                    } catch (Exception e) {
-                        Log.w(TAG, "IP 定位请求失败: " + e.getMessage());
+                    GeoResult geo = detectLocation();
+                    if (geo != null) {
+                        city = geo.city;
+                        lat = geo.lat;
+                        lon = geo.lon;
+                    } else {
+                        city = sp.getString("city", getDefaultCityName());
+                        if (city.isEmpty()) city = getDefaultCityName();
                     }
                 }
 
@@ -219,6 +210,153 @@ public final class WeatherManager {
                 new Handler(Looper.getMainLooper()).post(() -> callback.onWeatherUpdated(finalInfo));
             }
         }).start();
+    }
+
+    private static class GeoResult {
+        final String city;
+        final double lat;
+        final double lon;
+
+        GeoResult(String city, double lat, double lon) {
+            this.city = city;
+            this.lat = lat;
+            this.lon = lon;
+        }
+    }
+
+    private static String getDefaultCityName() {
+        return isChineseEnv() ? "北京" : "Beijing";
+    }
+
+    private static boolean isChineseEnv() {
+        Locale l = Locale.getDefault();
+        return l != null && ("zh".equalsIgnoreCase(l.getLanguage()) || "CN".equalsIgnoreCase(l.getCountry()));
+    }
+
+    private static String normalizeCityName(String rawCity) {
+        if (rawCity == null) return getDefaultCityName();
+        String trimmed = rawCity.trim();
+        if (trimmed.isEmpty()) return getDefaultCityName();
+
+        boolean hasChinese = false;
+        for (char c : trimmed.toCharArray()) {
+            if (Character.UnicodeBlock.of(c) == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS) {
+                hasChinese = true;
+                break;
+            }
+        }
+        if (hasChinese) {
+            if (trimmed.endsWith("市") && trimmed.length() > 2) {
+                return trimmed.substring(0, trimmed.length() - 1);
+            }
+            return trimmed;
+        }
+
+        String lower = trimmed.toLowerCase(Locale.ROOT);
+        if (lower.contains("beijing")) return "北京";
+        if (lower.contains("shanghai")) return "上海";
+        if (lower.contains("guangzhou")) return "广州";
+        if (lower.contains("shenzhen")) return "深圳";
+        if (lower.contains("chengdu")) return "成都";
+        if (lower.contains("hangzhou")) return "杭州";
+        if (lower.contains("wuhan")) return "武汉";
+        if (lower.contains("chongqing")) return "重庆";
+        if (lower.contains("nanjing")) return "南京";
+        if (lower.contains("xian") || lower.contains("xi'an")) return "西安";
+        if (lower.contains("tianjin")) return "天津";
+        if (lower.contains("suzhou")) return "苏州";
+        if (lower.contains("zhengzhou")) return "郑州";
+        if (lower.contains("changsha")) return "长沙";
+        if (lower.contains("dongguan")) return "东莞";
+        if (lower.contains("shenyang")) return "沈阳";
+        if (lower.contains("qingdao")) return "青岛";
+        if (lower.contains("hefei")) return "合肥";
+        if (lower.contains("foshan")) return "佛山";
+        if (lower.contains("fuzhou")) return "福州";
+        if (lower.contains("kunming")) return "昆明";
+        if (lower.contains("harbin")) return "哈尔滨";
+        if (lower.contains("jinan")) return "济南";
+        if (lower.contains("wenzhou")) return "温州";
+        if (lower.contains("nanning")) return "南宁";
+        if (lower.contains("changchun")) return "长春";
+        if (lower.contains("quanzhou")) return "泉州";
+        if (lower.contains("shijiazhuang")) return "石家庄";
+        if (lower.contains("guiyang")) return "贵阳";
+        if (lower.contains("nanchang")) return "南昌";
+        if (lower.contains("wuxi")) return "无锡";
+        if (lower.contains("taiyuan")) return "太原";
+        if (lower.contains("dalian")) return "大连";
+        if (lower.contains("xiamen")) return "厦门";
+        if (lower.contains("zhongshan")) return "中山";
+        if (lower.contains("huizhou")) return "惠州";
+        if (lower.contains("weifang")) return "潍坊";
+        if (lower.contains("lanzhou")) return "兰州";
+        if (lower.contains("haikou")) return "海口";
+        if (lower.contains("sanya")) return "三亚";
+        if (lower.contains("urumqi")) return "乌鲁木齐";
+        if (lower.contains("hohhot")) return "呼和浩特";
+        if (lower.contains("yinchuan")) return "银川";
+        if (lower.contains("xining")) return "西宁";
+        if (lower.contains("lhasa")) return "拉萨";
+        if (lower.contains("hong kong")) return "香港";
+        if (lower.contains("macau") || lower.contains("macao")) return "澳门";
+        if (lower.contains("taipei")) return "台北";
+
+        return trimmed;
+    }
+
+    private static GeoResult detectLocation() {
+        // 通道 1：api.ip.sb/geoip (高可靠 HTTPS，免 Key 全球极速)
+        try {
+            URL url = new URL("https://api.ip.sb/geoip");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(3000);
+            if (conn.getResponseCode() == 200) {
+                BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = r.readLine()) != null) sb.append(line);
+                r.close();
+                JSONObject json = new JSONObject(sb.toString());
+                String city = json.optString("city", "");
+                double lat = json.optDouble("latitude", Double.NaN);
+                double lon = json.optDouble("longitude", Double.NaN);
+                conn.disconnect();
+                if (!city.isEmpty() && !Double.isNaN(lat) && !Double.isNaN(lon)) {
+                    return new GeoResult(normalizeCityName(city), lat, lon);
+                }
+            }
+            conn.disconnect();
+        } catch (Exception ignored) {}
+
+        // 通道 2：ip-api.com (备选通道)
+        try {
+            URL url = new URL("http://ip-api.com/json/?fields=status,city,lat,lon");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(3000);
+            conn.setReadTimeout(3000);
+            if (conn.getResponseCode() == 200) {
+                BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = r.readLine()) != null) sb.append(line);
+                r.close();
+                JSONObject json = new JSONObject(sb.toString());
+                if ("success".equalsIgnoreCase(json.optString("status"))) {
+                    String city = json.optString("city", "");
+                    double lat = json.optDouble("lat", Double.NaN);
+                    double lon = json.optDouble("lon", Double.NaN);
+                    conn.disconnect();
+                    if (!city.isEmpty() && !Double.isNaN(lat) && !Double.isNaN(lon)) {
+                        return new GeoResult(normalizeCityName(city), lat, lon);
+                    }
+                }
+            }
+            conn.disconnect();
+        } catch (Exception ignored) {}
+
+        return null;
     }
 
     private static boolean isDaytime() {

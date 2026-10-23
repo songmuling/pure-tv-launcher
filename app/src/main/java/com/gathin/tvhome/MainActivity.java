@@ -2047,6 +2047,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void updateWeatherAndWallpaper(boolean force) {
+        // 关键保底与开机即显：开机第 0 秒立即提取本地时钟推导/持久化缓存的天气呈现挂件，防止界面出现数秒的空白或无地点
+        WeatherManager.WeatherInfo instant = WeatherManager.getLatest(this);
+        if (weatherInfo != null && instant != null) {
+            weatherInfo.setText(instant.getSummary());
+            weatherInfo.setVisibility(View.VISIBLE);
+        }
+
         SharedPreferences sp = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
         String mode;
         if (sp.contains("wallpaper_mode")) {
