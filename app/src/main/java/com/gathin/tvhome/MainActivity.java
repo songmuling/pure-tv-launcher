@@ -1778,20 +1778,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * On firmware with a standard settings handler the behaviour is unchanged.
      */
     private Intent systemIntent(String standardAction) {
-        TvProfile profile = TvProfileManager.getProfile(this);
         if (android.provider.Settings.ACTION_SETTINGS.equals(standardAction)) {
-            Intent custom = profile.getSettingsIntent(this);
-            if (custom != null && custom.resolveActivity(getPackageManager()) != null) return custom;
+            return TvProfileManager.getSettingsIntent(this);
         } else if (android.provider.Settings.ACTION_WIFI_SETTINGS.equals(standardAction)) {
-            Intent custom = profile.getWifiSettingsIntent(this);
-            if (custom != null && custom.resolveActivity(getPackageManager()) != null) return custom;
+            return TvProfileManager.getWifiSettingsIntent(this);
         }
         Intent i = new Intent(standardAction);
         if (i.resolveActivity(getPackageManager()) != null) return i;
         // Fallback to profile custom settings if standard action fails
-        Intent fallback = profile.getSettingsIntent(this);
-        if (fallback != null && fallback.resolveActivity(getPackageManager()) != null) return fallback;
-        return new Intent(standardAction);   // nothing found: let open() show the can't-open toast
+        return TvProfileManager.getSettingsIntent(this);
     }
 
     /** Hides the Inputs pill when it would have nothing to list: streaming boxes have no HDMI-in, AV or tuner. */

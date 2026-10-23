@@ -21,6 +21,38 @@ public class TvProfileManager {
         return currentProfile;
     }
 
+    /**
+     * 获取当前机型最佳的系统设置 Intent（优先厂商私有设置，若无法 resolve 则回退到标准 AOSP 设置）
+     */
+    public static Intent getSettingsIntent(Context context) {
+        TvProfile profile = getProfile(context);
+        Intent custom = profile.getSettingsIntent(context);
+        if (custom != null && custom.resolveActivity(context.getPackageManager()) != null) {
+            return custom;
+        }
+        Intent standard = new Intent(android.provider.Settings.ACTION_SETTINGS);
+        if (standard.resolveActivity(context.getPackageManager()) != null) {
+            return standard;
+        }
+        return custom != null ? custom : standard;
+    }
+
+    /**
+     * 获取当前机型最佳的 WiFi 设置 Intent
+     */
+    public static Intent getWifiSettingsIntent(Context context) {
+        TvProfile profile = getProfile(context);
+        Intent custom = profile.getWifiSettingsIntent(context);
+        if (custom != null && custom.resolveActivity(context.getPackageManager()) != null) {
+            return custom;
+        }
+        Intent standard = new Intent(android.provider.Settings.ACTION_WIFI_SETTINGS);
+        if (standard.resolveActivity(context.getPackageManager()) != null) {
+            return standard;
+        }
+        return getSettingsIntent(context);
+    }
+
     private static TvProfile detect(Context context) {
         String brand = Build.BRAND != null ? Build.BRAND.toLowerCase() : "";
         String manufacturer = Build.MANUFACTURER != null ? Build.MANUFACTURER.toLowerCase() : "";

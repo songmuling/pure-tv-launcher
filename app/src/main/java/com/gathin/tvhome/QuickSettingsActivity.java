@@ -11,6 +11,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.gathin.tvhome.profile.TvProfileManager;
+
 /**
  * The panel the remote's Settings button opens when {@code settings_key_panel} is on (HomeKeyService):
  * a few glass rows under the Settings pill, over Home or whatever app is playing. Translucent and in a
@@ -25,9 +27,9 @@ public final class QuickSettingsActivity extends Activity {
         setContentView(R.layout.activity_quick_settings);
         findViewById(R.id.scrim).setOnClickListener(v -> finish());
         LinearLayout rows = findViewById(R.id.rows);
-        addRow(rows, R.drawable.ic_settings, R.string.tv_settings, 0, new Intent(Settings.ACTION_SETTINGS));
+        addRow(rows, R.drawable.ic_settings, R.string.tv_settings, 0, TvProfileManager.getSettingsIntent(this));
         addRow(rows, R.drawable.ic_picture, R.string.quick_picture, 0, new Intent(Settings.ACTION_DISPLAY_SETTINGS));
-        addRow(rows, R.drawable.ic_wifi, R.string.quick_network, 0, new Intent(Settings.ACTION_WIFI_SETTINGS));
+        addRow(rows, R.drawable.ic_wifi, R.string.quick_network, 0, TvProfileManager.getWifiSettingsIntent(this));
         addRow(rows, R.drawable.ic_apps, R.string.quick_apps, R.string.quick_apps_hint,
                 new Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS));
         // Through Home, so it rebuilds with the new choices when Launcher settings closes.
@@ -60,9 +62,14 @@ public final class QuickSettingsActivity extends Activity {
         if (status != 0) hint.setText(status);
         else hint.setVisibility(View.GONE);
         row.setOnClickListener(v -> {
+            if (target == null) {
+                Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show();
+                finish();
+                return;
+            }
             try {
                 startActivity(target.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-            } catch (ActivityNotFoundException e) {
+            } catch (ActivityNotFoundException | SecurityException e) {
                 Toast.makeText(this, R.string.not_available, Toast.LENGTH_SHORT).show();
             }
             finish();
