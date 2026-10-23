@@ -12,12 +12,11 @@
         android:layout_height="match_parent"
         android:importantForAccessibility="no" />
 
-    <!-- Ambient glow disabled to preserve pristine wallpaper background. -->
+    <!-- Ambient glow: 仅在极简主题下启用的氛围光晕 -->
     <View
         android:id="@+id/ambient"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:visibility="gone"
         android:alpha="0" />
 
     <!-- Top shelf: the focused dock app's name, positioned above the dock in code. -->

@@ -227,9 +227,8 @@ public final class LauncherSettingsActivity extends Activity {
         wallpaperModeBing.setSelected(MODE_BING.equals(wallpaperMode));
         wallpaperModeOff.setSelected(MODE_OFF.equals(wallpaperMode));
 
-        boolean isWeather = MODE_WEATHER.equals(wallpaperMode);
-        weatherCityChoice.setEnabled(isWeather);
-        weatherCityChoice.setAlpha(isWeather ? 1f : 0.4f);
+        weatherCityChoice.setEnabled(true);
+        weatherCityChoice.setAlpha(1.0f);
 
         String currentCity = WeatherManager.getCustomCity(this);
         String cityDisplay = currentCity.isEmpty() ? getString(R.string.weather_city_auto) : currentCity;

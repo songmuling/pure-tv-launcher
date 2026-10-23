@@ -12,8 +12,14 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.cert.X509Certificate;
 import java.util.Calendar;
 import java.util.Locale;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 /**
  * 零权限、零成本天气管理模块
@@ -157,20 +163,9 @@ public final class WeatherManager {
                     }
                 }
 
-                // 2. Open-Meteo 实时气象查询
-                URL weatherUrl = new URL("https://api.open-meteo.com/v1/forecast?latitude="
-                        + lat + "&longitude=" + lon + "&current_weather=true");
-                HttpURLConnection wConn = (HttpURLConnection) weatherUrl.openConnection();
-                wConn.setConnectTimeout(5000);
-                wConn.setReadTimeout(5000);
-                if (wConn.getResponseCode() == 200) {
-                    BufferedReader r = new BufferedReader(new InputStreamReader(wConn.getInputStream()));
-                    StringBuilder sb = new StringBuilder();
-                    String line;
-                    while ((line = r.readLine()) != null) sb.append(line);
-                    r.close();
-
-                    JSONObject wJson = new JSONObject(sb.toString());
+                // 2. Open-Meteo 实时气象查询（双协议容灾 + 兼容旧版系统根证书）
+                JSONObject wJson = fetchWeatherJson(lat, lon);
+                if (wJson != null && wJson.has("current_weather")) {
                     JSONObject cur = wJson.getJSONObject("current_weather");
                     double tempD = cur.optDouble("temperature", 20.0);
                     int temp = (int) Math.round(tempD);
@@ -193,7 +188,6 @@ public final class WeatherManager {
                             .putLong("last_update", System.currentTimeMillis())
                             .apply();
                 }
-                wConn.disconnect();
             } catch (Exception e) {
                 Log.w(TAG, "天气数据获取异常: " + e.getMessage());
             } finally {
@@ -305,37 +299,63 @@ public final class WeatherManager {
         return trimmed;
     }
 
-    private static GeoResult detectLocation() {
-        // 通道 1：api.ip.sb/geoip (高可靠 HTTPS，免 Key 全球极速)
-        try {
-            URL url = new URL("https://api.ip.sb/geoip");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setConnectTimeout(3000);
-            conn.setReadTimeout(3000);
-            if (conn.getResponseCode() == 200) {
-                BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                StringBuilder sb = new StringBuilder();
-                String line;
-                while ((line = r.readLine()) != null) sb.append(line);
-                r.close();
-                JSONObject json = new JSONObject(sb.toString());
-                String city = json.optString("city", "");
-                double lat = json.optDouble("latitude", Double.NaN);
-                double lon = json.optDouble("longitude", Double.NaN);
-                conn.disconnect();
-                if (!city.isEmpty() && !Double.isNaN(lat) && !Double.isNaN(lon)) {
-                    return new GeoResult(normalizeCityName(city), lat, lon);
-                }
+    private static void setupTrustAllSsl(HttpURLConnection conn) {
+        if (conn instanceof HttpsURLConnection) {
+            try {
+                TrustManager[] trustAllCerts = new TrustManager[]{
+                    new X509TrustManager() {
+                        public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+                        public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+                        public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+                    }
+                };
+                SSLContext sc = SSLContext.getInstance("TLS");
+                sc.init(null, trustAllCerts, new java.security.SecureRandom());
+                ((HttpsURLConnection) conn).setSSLSocketFactory(sc.getSocketFactory());
+                ((HttpsURLConnection) conn).setHostnameVerifier((hostname, session) -> true);
+            } catch (Exception e) {
+                Log.w(TAG, "SSL配置异常: " + e.getMessage());
             }
-            conn.disconnect();
-        } catch (Exception ignored) {}
+        }
+    }
 
-        // 通道 2：ip-api.com (备选通道)
+    private static JSONObject fetchWeatherJson(double lat, double lon) {
+        String[] urls = new String[]{
+            "http://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&current_weather=true",
+            "https://api.open-meteo.com/v1/forecast?latitude=" + lat + "&longitude=" + lon + "&current_weather=true"
+        };
+        for (String urlStr : urls) {
+            HttpURLConnection conn = null;
+            try {
+                URL url = new URL(urlStr);
+                conn = (HttpURLConnection) url.openConnection();
+                setupTrustAllSsl(conn);
+                conn.setConnectTimeout(5000);
+                conn.setReadTimeout(5000);
+                if (conn.getResponseCode() == 200) {
+                    BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = r.readLine()) != null) sb.append(line);
+                    r.close();
+                    return new JSONObject(sb.toString());
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "气象接口 (" + urlStr + ") 拉取异常: " + e.getMessage());
+            } finally {
+                if (conn != null) conn.disconnect();
+            }
+        }
+        return null;
+    }
+
+    private static GeoResult detectLocation() {
+        // 通道 1：ip-api.com (标准 HTTP 通道，完美兼容老版 Android 6 系统避免根证书失效)
         try {
             URL url = new URL("http://ip-api.com/json/?fields=status,city,lat,lon");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setConnectTimeout(3000);
-            conn.setReadTimeout(3000);
+            conn.setConnectTimeout(3500);
+            conn.setReadTimeout(3500);
             if (conn.getResponseCode() == 200) {
                 BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()));
                 StringBuilder sb = new StringBuilder();
@@ -351,6 +371,32 @@ public final class WeatherManager {
                     if (!city.isEmpty() && !Double.isNaN(lat) && !Double.isNaN(lon)) {
                         return new GeoResult(normalizeCityName(city), lat, lon);
                     }
+                }
+            }
+            conn.disconnect();
+        } catch (Exception ignored) {}
+
+        // 通道 2：api.ip.sb/geoip (配备 TrustAll SSL 机制，防止老电视根证书过期)
+        try {
+            URL url = new URL("https://api.ip.sb/geoip");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            setupTrustAllSsl(conn);
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 PureTV/1.0");
+            conn.setConnectTimeout(3500);
+            conn.setReadTimeout(3500);
+            if (conn.getResponseCode() == 200) {
+                BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = r.readLine()) != null) sb.append(line);
+                r.close();
+                JSONObject json = new JSONObject(sb.toString());
+                String city = json.optString("city", "");
+                double lat = json.optDouble("latitude", Double.NaN);
+                double lon = json.optDouble("longitude", Double.NaN);
+                conn.disconnect();
+                if (!city.isEmpty() && !Double.isNaN(lat) && !Double.isNaN(lon)) {
+                    return new GeoResult(normalizeCityName(city), lat, lon);
                 }
             }
             conn.disconnect();

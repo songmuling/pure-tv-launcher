@@ -287,7 +287,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         sky.setIntensity(cfg.skyIntensity);
         ambient = findViewById(R.id.ambient);
         if (ambient != null) {
-            ambient.setVisibility(View.GONE);
+            ambient.setVisibility(isMinimalTheme() ? View.VISIBLE : View.GONE);
             // The glow is one bitmap, so its alpha can be applied while drawing it. Otherwise every frame of
             // a fade renders it into a full-screen offscreen buffer first.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -472,6 +472,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (!onTile) {
                 hideGlass();
                 hideHero();
+                if (ambient != null) {
+                    stopAmbientAnimation();
+                    ambient.animate().cancel();
+                    ambient.animate().alpha(0f).setDuration(200).start();
+                }
             }
         });
 
@@ -1173,6 +1178,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             heroName.setTranslationX(0f);
             heroName.setAlpha(1f);
             heroShown = true;
+            if (isMinimalTheme() && ambient != null) {
+                setAmbient(adapter.ambientColorAt(position));
+                ambient.setAlpha(1f);
+            }
             return;
         }
 
@@ -1183,6 +1192,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             heroName.setTranslationX(0f);
             heroName.animate().alpha(1f).setDuration(260).start();
             heroShown = true;
+            if (isMinimalTheme()) transitionAmbient(adapter.ambientColorAt(position));
         } else if (changed) {
             if (advancedEffects) heroName.animate().cancel();
             heroName.animate().alpha(0f).translationX(-12 * density).setDuration(120).withEndAction(() -> {
@@ -1191,6 +1201,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 heroName.setTranslationX(12 * density);
                 heroName.animate().alpha(1f).translationX(0f).setDuration(200).start();
             }).start();
+            if (isMinimalTheme()) transitionAmbient(adapter.ambientColorAt(position));
         } else {
             heroName.setY(y);
         }
@@ -1254,6 +1265,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * show (every tile has its name underneath).
      */
     private void showGlowOnly(int position) {
+        if (!isMinimalTheme() || ambient == null) return;
         int color = adapter.ambientColorAt(position);
         stopAmbientAnimation();
         heroName.animate().cancel();
@@ -2042,6 +2054,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     // ---- launcher settings and module cards -------------------------------------------------------
 
 
+    private boolean isMinimalTheme() {
+        SharedPreferences sp = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
+        String mode;
+        if (sp.contains("wallpaper_mode")) {
+            mode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_WEATHER);
+        } else if (sp.contains("bing_wallpaper")) {
+            mode = sp.getBoolean("bing_wallpaper", true) ? LauncherSettingsActivity.MODE_BING : LauncherSettingsActivity.MODE_OFF;
+        } else {
+            mode = LauncherSettingsActivity.MODE_WEATHER;
+        }
+        return LauncherSettingsActivity.MODE_OFF.equals(mode);
+    }
+
     private void updateWeatherAndWallpaper() {
         updateWeatherAndWallpaper(false);
     }
@@ -2062,6 +2087,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             mode = sp.getBoolean("bing_wallpaper", true) ? LauncherSettingsActivity.MODE_BING : LauncherSettingsActivity.MODE_OFF;
         } else {
             mode = LauncherSettingsActivity.MODE_WEATHER;
+        }
+
+        if (ambient != null) {
+            boolean minimal = LauncherSettingsActivity.MODE_OFF.equals(mode);
+            ambient.setVisibility(minimal ? View.VISIBLE : View.GONE);
+            if (!minimal) {
+                stopAmbientAnimation();
+                ambient.animate().cancel();
+                ambient.setAlpha(0f);
+            }
         }
 
         if (LauncherSettingsActivity.MODE_WEATHER.equals(mode)) {
