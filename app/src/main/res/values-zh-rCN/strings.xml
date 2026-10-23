@@ -70,6 +70,7 @@
     <string name="hidden_apps_empty">暂无隐藏的应用\n长按任意桌面图标可选择「从桌面隐藏」</string>
     <string name="restore_to_home">恢复显示到桌面</string>
     <string name="restore_toast">已将“%1$s”恢复到桌面</string>
+    <string name="wallpaper_mode_title">壁纸模式</string>
     <string name="wallpaper_mode_label">壁纸模式：%1$s</string>
     <string name="wallpaper_mode_weather">动态天气风景</string>
     <string name="wallpaper_mode_bing">必应每日高清</string>

@@ -11,7 +11,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.gathin.tvhome.profile.TvProfileManager;
 
 /** Remote-friendly settings owned by the launcher; system settings stay one row away. */
 public final class LauncherSettingsActivity extends Activity {
@@ -23,7 +22,9 @@ public final class LauncherSettingsActivity extends Activity {
     private final TextView[] columnChoices = new TextView[4];
     private TextView animationsChoice;
     private TextView advancedChoice;
-    private TextView wallpaperModeChoice;
+    private TextView wallpaperModeWeather;
+    private TextView wallpaperModeBing;
+    private TextView wallpaperModeOff;
     private TextView weatherCityChoice;
     private TextView followThemeChoice;
     private int columns;
@@ -91,22 +92,13 @@ public final class LauncherSettingsActivity extends Activity {
         }
 
 
-        wallpaperModeChoice = findViewById(R.id.wallpaperModeChoice);
-        wallpaperModeChoice.setOnClickListener(v -> {
-            if (MODE_WEATHER.equals(wallpaperMode)) {
-                wallpaperMode = MODE_BING;
-            } else if (MODE_BING.equals(wallpaperMode)) {
-                wallpaperMode = MODE_OFF;
-            } else {
-                wallpaperMode = MODE_WEATHER;
-            }
-            choices.edit()
-                    .putString("wallpaper_mode", wallpaperMode)
-                    .putBoolean("bing_wallpaper", MODE_BING.equals(wallpaperMode))
-                    .apply();
-            setResult(RESULT_OK);
-            refresh();
-        });
+        wallpaperModeWeather = findViewById(R.id.wallpaperModeWeather);
+        wallpaperModeBing = findViewById(R.id.wallpaperModeBing);
+        wallpaperModeOff = findViewById(R.id.wallpaperModeOff);
+
+        wallpaperModeWeather.setOnClickListener(v -> setWallpaperMode(MODE_WEATHER));
+        wallpaperModeBing.setOnClickListener(v -> setWallpaperMode(MODE_BING));
+        wallpaperModeOff.setOnClickListener(v -> setWallpaperMode(MODE_OFF));
 
         weatherCityChoice = findViewById(R.id.weatherCityChoice);
         weatherCityChoice.setOnClickListener(v -> showCityDialog());
@@ -129,8 +121,6 @@ public final class LauncherSettingsActivity extends Activity {
             Toast.makeText(this, R.string.home_settings_help, Toast.LENGTH_LONG).show();
             open(new Intent(Settings.ACTION_HOME_SETTINGS));
         });
-        findViewById(R.id.tvSettingsChoice).setOnClickListener(v ->
-                open(TvProfileManager.getSettingsIntent(this)));
         refresh();
         columnChoices[Math.max(0, Math.min(columns - 4, 3))].requestFocus();
     }
@@ -211,6 +201,17 @@ public final class LauncherSettingsActivity extends Activity {
         refresh();
     }
 
+    private void setWallpaperMode(String mode) {
+        if (mode.equals(wallpaperMode)) return;
+        wallpaperMode = mode;
+        choices.edit()
+                .putString("wallpaper_mode", wallpaperMode)
+                .putBoolean("bing_wallpaper", MODE_BING.equals(wallpaperMode))
+                .apply();
+        setResult(RESULT_OK);
+        refresh();
+    }
+
     private void refresh() {
         for (int i = 0; i < columnChoices.length; i++) {
             columnChoices[i].setSelected(columns == i + 4);
@@ -222,15 +223,13 @@ public final class LauncherSettingsActivity extends Activity {
         advancedChoice.setEnabled(animations);
         advancedChoice.setAlpha(animations ? 1f : 0.5f);
 
-        String modeName;
-        if (MODE_WEATHER.equals(wallpaperMode)) {
-            modeName = getString(R.string.wallpaper_mode_weather);
-        } else if (MODE_BING.equals(wallpaperMode)) {
-            modeName = getString(R.string.wallpaper_mode_bing);
-        } else {
-            modeName = getString(R.string.wallpaper_mode_off);
-        }
-        wallpaperModeChoice.setText(getString(R.string.wallpaper_mode_label, modeName));
+        wallpaperModeWeather.setSelected(MODE_WEATHER.equals(wallpaperMode));
+        wallpaperModeBing.setSelected(MODE_BING.equals(wallpaperMode));
+        wallpaperModeOff.setSelected(MODE_OFF.equals(wallpaperMode));
+
+        boolean isWeather = MODE_WEATHER.equals(wallpaperMode);
+        weatherCityChoice.setEnabled(isWeather);
+        weatherCityChoice.setAlpha(isWeather ? 1f : 0.4f);
 
         String currentCity = WeatherManager.getCustomCity(this);
         String cityDisplay = currentCity.isEmpty() ? getString(R.string.weather_city_auto) : currentCity;

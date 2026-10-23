@@ -407,9 +407,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             open(systemIntent(Settings.ACTION_WIFI_SETTINGS));
             return true;
         });
-        btnSettings.setOnClickListener(v -> showSettingsMenu());
+        btnSettings.setOnClickListener(v -> open(systemIntent(Settings.ACTION_SETTINGS)));
         btnSettings.setOnLongClickListener(v -> {
-            open(systemIntent(Settings.ACTION_SETTINGS));
+            startActivityForResult(new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST);
             return true;
         });
         btnReorder = findViewById(R.id.btnReorder);
@@ -2041,22 +2041,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     // ---- launcher settings and module cards -------------------------------------------------------
 
-    /** Keep a normal Settings click for the TV; the launcher's choices live behind hold OK. */
-    private void showSettingsMenu() {
-        View anchor = findViewById(R.id.btnSettings);
-        View panel = getLayoutInflater().inflate(R.layout.popup_inputs, root, false);
-        LinearLayout rows = panel.findViewById(R.id.rows);
-        PopupWindow popup = glassPopup(panel, (int) (200 * density));
-        addSettingsMenuRow(rows, popup, R.string.launcher_settings, () -> startActivityForResult(
-                new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST));
-        addSettingsMenuRow(rows, popup, R.string.system_settings, () -> open(systemIntent(Settings.ACTION_SETTINGS)));
-        panel.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
-        popup.setWidth(Math.max((int) (200 * density), panel.getMeasuredWidth()));
-        // Hebrew puts Settings at the left of the header: grow the menu inward from it.
-        dropIn(popup, panel, anchor, getResources().getBoolean(R.bool.rtl_menu_bar)
-                ? Gravity.START : Gravity.END);
-        rows.getChildAt(0).requestFocus();
-    }
 
     private void updateWeatherAndWallpaper() {
         updateWeatherAndWallpaper(false);
@@ -2130,38 +2114,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
     }
 
-    private void addSettingsMenuRow(LinearLayout rows, PopupWindow popup, int title, Runnable action) {
-        addSettingsMenuRow(rows, popup, getText(title), action);
-    }
-
-    private void addSettingsMenuRow(LinearLayout rows, PopupWindow popup, CharSequence title, Runnable action) {
-        View row = getLayoutInflater().inflate(R.layout.item_input, rows, false);
-        row.findViewById(R.id.icon).setVisibility(View.GONE);
-        row.findViewById(R.id.dot).setVisibility(View.GONE);
-        row.findViewById(R.id.status).setVisibility(View.GONE);
-        ((TextView) row.findViewById(R.id.title)).setText(title);
-        row.setOnClickListener(v -> {
-            popup.dismiss();
-            action.run();
-        });
-        // The OK-up after opening the menu must not activate its first row.
-        final boolean[] pressed = {false};
-        row.setOnKeyListener((v, code, event) -> {
-            if (code != KeyEvent.KEYCODE_DPAD_CENTER && code != KeyEvent.KEYCODE_ENTER) return false;
-            if (event.getAction() == KeyEvent.ACTION_DOWN) {
-                if (event.getRepeatCount() == 0) pressed[0] = true;
-                return true;
-            }
-            boolean activate = pressed[0];
-            pressed[0] = false;
-            if (activate) {
-                popup.dismiss();
-                action.run();
-            }
-            return true;
-        });
-        rows.addView(row);
-    }
 
     /**
      * Asks about the next card that has no decision for its current signing key. One prompt at a
