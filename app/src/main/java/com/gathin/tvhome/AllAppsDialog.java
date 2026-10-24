@@ -160,6 +160,10 @@ final class AllAppsDialog extends Dialog {
     @Override
     protected void onStop() {
         super.onStop();
+        if (currentActionDialog != null && currentActionDialog.isShowing()) {
+            try { currentActionDialog.dismiss(); } catch (Exception ignored) {}
+            currentActionDialog = null;
+        }
         try {
             activity.unregisterReceiver(homeReceiver);
         } catch (Exception ignored) {}
@@ -246,6 +250,8 @@ final class AllAppsDialog extends Dialog {
 
     private boolean isLaunchingApp = false;
 
+    private AlertDialog currentActionDialog = null;
+
     private boolean isSystemApp(String pkg) {
         try {
             ApplicationInfo ai = activity.getPackageManager().getApplicationInfo(pkg, 0);
@@ -265,6 +271,10 @@ final class AllAppsDialog extends Dialog {
     }
 
     private void showAppActionDialog(AppItem item) {
+        if (currentActionDialog != null && currentActionDialog.isShowing()) {
+            return; // 坚决防止多重弹窗重叠，保证按一次返回键就能正常关闭
+        }
+
         boolean isSystem = isSystemApp(item.pkg);
         boolean isUpdatedSystem = isUpdatedSystemApp(item.pkg);
 
@@ -276,9 +286,13 @@ final class AllAppsDialog extends Dialog {
         }
         options.add(activity.getString(R.string.all_apps_details));
 
-        new AlertDialog.Builder(activity)
+        AlertDialog dialog = new AlertDialog.Builder(activity)
                 .setTitle(item.label)
                 .setItems(options.toArray(new CharSequence[0]), (d, which) -> {
+                    if (currentActionDialog != null) {
+                        try { currentActionDialog.dismiss(); } catch (Exception ignored) {}
+                        currentActionDialog = null;
+                    }
                     String selected = options.get(which);
                     if (selected.startsWith(activity.getString(R.string.all_apps_uninstall))) {
                         if (isSystem && !isUpdatedSystem) {
@@ -290,22 +304,48 @@ final class AllAppsDialog extends Dialog {
                         openAppDetails(item.pkg);
                     }
                 })
-                .setNegativeButton(android.R.string.cancel, null)
-                .show();
+                .setNegativeButton(android.R.string.cancel, (d, which) -> {
+                    currentActionDialog = null;
+                })
+                .create();
+
+        dialog.setOnDismissListener(d -> currentActionDialog = null);
+        currentActionDialog = dialog;
+        dialog.show();
     }
 
     private void requestUninstall(String pkg) {
+        if (currentActionDialog != null) {
+            try { currentActionDialog.dismiss(); } catch (Exception ignored) {}
+            currentActionDialog = null;
+        }
+        boolean started = false;
         try {
-            Intent intent = new Intent(Intent.ACTION_DELETE);
+            Intent intent = new Intent(Intent.ACTION_UNINSTALL_PACKAGE);
             intent.setData(Uri.parse("package:" + pkg));
+            intent.putExtra(Intent.EXTRA_RETURN_RESULT, true);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             activity.startActivity(intent);
-        } catch (Exception e) {
+            started = true;
+        } catch (Exception ignored) {}
+
+        if (!started) {
+            try {
+                Intent intent = new Intent(Intent.ACTION_DELETE);
+                intent.setData(Uri.parse("package:" + pkg));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                activity.startActivity(intent);
+                started = true;
+            } catch (Exception ignored) {}
+        }
+
+        if (!started) {
             try {
                 Intent fallback = new Intent(Intent.ACTION_UNINSTALL_PACKAGE);
                 fallback.setData(Uri.parse("package:" + pkg));
                 fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 activity.startActivity(fallback);
+                started = true;
             } catch (Exception ex) {
                 Toast.makeText(activity, R.string.not_available, Toast.LENGTH_SHORT).show();
             }
@@ -398,6 +438,9 @@ final class AllAppsDialog extends Dialog {
 
             // 触屏 / 空鼠 / 鼠标长按兜底
             holder.card.setOnLongClickListener(v -> {
+                if (holder.handledLongPress) {
+                    return true;
+                }
                 showAppActionDialog(item);
                 return true;
             });

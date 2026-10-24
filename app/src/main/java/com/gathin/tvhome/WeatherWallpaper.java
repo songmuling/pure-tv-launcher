@@ -76,10 +76,12 @@ public final class WeatherWallpaper {
             "https://cn.bing.com/th?id=OHR.Monteverde_EN-US9503031199_1920x1080.jpg"        // 蒙特维多阴天多云云雾林
     };
 
-    // 8. 多云/阴天 - 夜晚（纯净月影暗夜、雷尼尔山月光云夜）
+    // 8. 多云/阴天 - 夜晚（雷尼尔山月光云夜、大弯深邃夜空、冰岛极光夜色、大阪静谧流光）
     private static final String[] CLOUDY_NIGHT_POOL = {
-            "https://cn.bing.com/th?id=OHR.MineralMoon_EN-US8936600169_1920x1080.jpg",      // 深暗夜色中的纯净月影
-            "https://cn.bing.com/th?id=OHR.MoonlightRainier_EN-US6336057354_1920x1080.jpg"   // 雷尼尔山月光与深夜浮云
+            "https://cn.bing.com/th?id=OHR.MoonlightRainier_EN-US6336057354_1920x1080.jpg",   // 雷尼尔山月光与深夜浮云群山
+            "https://cn.bing.com/th?id=OHR.BigBendMilkyWay_EN-US7213876995_1920x1080.jpg",  // 大弯国家公园深邃夜空
+            "https://cn.bing.com/th?id=OHR.AurorasIceland_EN-US3293282785_1920x1080.jpg",   // 冰岛夜空极光与浮云
+            "https://cn.bing.com/th?id=OHR.OsakaNight_EN-US7022302235_1920x1080.jpg"        // 大阪静谧繁星流光夜景
     };
 
     // 9. 晴空 - 白天（冰川公园晴空湛蓝大湖、太浩湖碧波万顷艳阳、十六湖秋水晴日）
@@ -120,9 +122,15 @@ public final class WeatherWallpaper {
             android.content.SharedPreferences sp = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
             String lastPath = sp.getString(KEY_LAST_WALLPAPER, null);
             if (lastPath != null) {
-                File lastFile = new File(lastPath);
-                if (lastFile.exists() && lastFile.length() > 30000) {
-                    return lastFile;
+                if (lastPath.contains("1788828647") || lastPath.contains("MineralMoon")) {
+                    new File(lastPath).delete();
+                    sp.edit().remove(KEY_LAST_WALLPAPER).apply();
+                    lastPath = null;
+                } else {
+                    File lastFile = new File(lastPath);
+                    if (lastFile.exists() && lastFile.length() > 30000) {
+                        return lastFile;
+                    }
                 }
             }
 
@@ -132,6 +140,10 @@ public final class WeatherWallpaper {
             if (files == null || files.length == 0) return null;
             File newest = null;
             for (File f : files) {
+                if (f.isFile() && (f.getName().contains("1788828647") || f.getName().contains("MineralMoon"))) {
+                    f.delete();
+                    continue;
+                }
                 if (f.isFile() && f.getName().startsWith("bing_w_") && f.length() > 30000) {
                     if (newest == null || f.lastModified() > newest.lastModified()) {
                         newest = f;
