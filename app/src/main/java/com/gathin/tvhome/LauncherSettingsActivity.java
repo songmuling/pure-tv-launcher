@@ -27,6 +27,8 @@ public final class LauncherSettingsActivity extends Activity {
     private TextView wallpaperModeOff;
     private TextView weatherCityChoice;
     private TextView followThemeChoice;
+    private TextView checkUpdateChoice;
+    private TextView checkUpdateStatus;
     private int columns;
     private boolean animations;
     private boolean advancedEffects;
@@ -121,6 +123,28 @@ public final class LauncherSettingsActivity extends Activity {
             Toast.makeText(this, R.string.home_settings_help, Toast.LENGTH_LONG).show();
             open(new Intent(Settings.ACTION_HOME_SETTINGS));
         });
+
+        checkUpdateChoice = findViewById(R.id.checkUpdateChoice);
+        checkUpdateStatus = findViewById(R.id.checkUpdateStatus);
+        String currentVersionName = UpdateManager.getCurrentVersionName(this);
+        checkUpdateChoice.setText("● " + getString(R.string.check_update, currentVersionName));
+        checkUpdateChoice.setOnClickListener(v -> {
+            checkUpdateStatus.setText(R.string.checking_update);
+            UpdateManager.checkUpdate(this, info -> {
+                if (isFinishing() || isDestroyed()) return;
+                if (info != null && info.hasUpdate) {
+                    checkUpdateStatus.setText(getString(R.string.new_version_available, info.tagName));
+                    UpdateManager.showUpdateDialog(LauncherSettingsActivity.this, info);
+                } else if (info != null && info.tagName != null && !info.tagName.isEmpty()) {
+                    checkUpdateStatus.setText(getString(R.string.already_latest_version, info.tagName));
+                    Toast.makeText(LauncherSettingsActivity.this, getString(R.string.already_latest_version, info.tagName), Toast.LENGTH_SHORT).show();
+                } else {
+                    checkUpdateStatus.setText(R.string.check_update_failed);
+                    Toast.makeText(LauncherSettingsActivity.this, R.string.check_update_failed, Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+
         refresh();
         animationsChoice.requestFocus();
     }

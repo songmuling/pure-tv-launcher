@@ -27,11 +27,11 @@ jobs:
 
       - name: Build All Flavors APK
         run: |
-          ./gradlew assembleRelease --stacktrace || {
+          ./gradlew assembleRelease -PbuildNumber=${{ github.run_number }} --stacktrace || {
             git config --global user.name "github-actions[bot]"
             git config --global user.email "github-actions[bot]@users.noreply.github.com"
             git checkout -B build-failure-log
-            ./gradlew assembleRelease --stacktrace > gradle-error.log 2>&1 || true
+            ./gradlew assembleRelease -PbuildNumber=${{ github.run_number }} --stacktrace > gradle-error.log 2>&1 || true
             git add -f gradle-error.log
             git commit -m "ci: capture gradle failure log [skip ci]"
             git push -f origin build-failure-log

@@ -125,5 +125,19 @@
             android:text="@string/home_settings_help"
             android:textColor="#FFACB8C1"
             android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/checkUpdateChoice"
+            style="@style/SettingsRow"
+            android:layout_marginTop="28dp"
+            android:text="@string/check_update" />
+
+        <TextView
+            android:id="@+id/checkUpdateStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="7dp"
+            android:textColor="#FFACB8C1"
+            android:textSize="14sp" />
     </LinearLayout>
 </ScrollView>

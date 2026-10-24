@@ -177,6 +177,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** Tile order when reorder mode started, to save only when something moved. */
     private List<String> orderAtStart;
     private View btnReorder;
+    private View btnUpdate;
     /** dock_apps as loaded (config.xml or a theme): a saved Order only applies while these are unchanged. */
     private List<String> dockApps;
     /** fill_dock false: the dock can have empty slots, which reorder mode leaves out and restores afterwards. */
@@ -415,6 +416,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnReorder = findViewById(R.id.btnReorder);
         btnReorder.setOnClickListener(v -> toggleReorder());
         btnReorder.setVisibility(View.GONE);
+        btnUpdate = findViewById(R.id.btnUpdate);
+        if (btnUpdate != null) {
+            btnUpdate.setVisibility(View.GONE);
+        }
         btnAllApps = findViewById(R.id.btnAllApps);
         if (btnAllApps != null) {
             btnAllApps.setOnClickListener(v -> showAllApps());
@@ -455,13 +460,16 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         };
         btnInputs.setOnKeyListener(pillKeys);
         btnWifi.setOnKeyListener(pillKeys);
+        if (btnUpdate != null) btnUpdate.setOnKeyListener(pillKeys);
         btnSettings.setOnKeyListener(pillKeys);
         btnReorder.setOnKeyListener(pillKeys);
         if (advancedEffects) {
-            for (View button : new View[]{btnInputs, btnWifi, btnReorder, btnSettings}) {
-                button.setOnFocusChangeListener((view, focused) -> view.animate()
-                        .scaleX(focused ? 1.04f : 1f).scaleY(focused ? 1.04f : 1f)
-                        .setDuration(160).start());
+            for (View button : new View[]{btnInputs, btnWifi, btnReorder, btnUpdate, btnSettings}) {
+                if (button != null) {
+                    button.setOnFocusChangeListener((view, focused) -> view.animate()
+                            .scaleX(focused ? 1.04f : 1f).scaleY(focused ? 1.04f : 1f)
+                            .setDuration(160).start());
+                }
             }
         }
         if (festive) applyFestiveSkin((TextView) btnInputs, (TextView) btnSettings);
@@ -505,6 +513,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         // Not after recreate(): the launch intent survives it and would open the settings again.
         if (savedInstanceState == null) openLauncherSettingsIfAsked(getIntent());
+        checkAppUpdate();
+    }
+
+    private void checkAppUpdate() {
+        UpdateManager.checkUpdate(this, info -> {
+            if (isFinishing() || isDestroyed()) return;
+            if (info != null && info.hasUpdate && btnUpdate != null) {
+                btnUpdate.setVisibility(View.VISIBLE);
+                btnUpdate.setOnClickListener(v -> UpdateManager.showUpdateDialog(MainActivity.this, info));
+            } else if (btnUpdate != null) {
+                btnUpdate.setVisibility(View.GONE);
+            }
+        });
     }
 
     private boolean openLauncherSettingsIfAsked(Intent intent) {

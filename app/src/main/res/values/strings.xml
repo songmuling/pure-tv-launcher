@@ -124,4 +124,19 @@
     <string name="all_apps_uninstall">Uninstall App</string>
     <string name="all_apps_details">App Info</string>
     <string name="all_apps_system_toast">System app cannot be uninstalled</string>
+    <string name="update_available">Update available</string>
+    <string name="check_update">Check for updates (%1$s)</string>
+    <string name="checking_update">Checking GitHub for updates...</string>
+    <string name="already_latest_version">Already up to date (%1$s)</string>
+    <string name="new_version_available">New version %1$s available</string>
+    <string name="check_update_failed">Check failed, please check network</string>
+    <string name="update_dialog_title">New Version Available</string>
+    <string name="update_version_format">Current: %1$s  ➔  Latest: %2$s</string>
+    <string name="update_changelog_title">Changelog:</string>
+    <string name="update_now">Update Now</string>
+    <string name="update_later">Later</string>
+    <string name="downloading_update">Downloading update from GitHub...</string>
+    <string name="download_progress_format">Downloading... %1$d%%</string>
+    <string name="download_failed">Download failed: %1$s</string>
+    <string name="download_success_installing">Downloaded, launching system installer...</string>
 </resources>
