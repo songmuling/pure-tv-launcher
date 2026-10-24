@@ -98,6 +98,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private static final int LAUNCHER_SETTINGS_REQUEST = 42;
     /** Sent by QuickSettingsActivity: open Launcher settings from here so Home rebuilds when they close. */
     static final String ACTION_LAUNCHER_SETTINGS = "com.gathin.tvhome.action.LAUNCHER_SETTINGS";
+    public static final String ACTION_WALLPAPER_CHANGED = "com.gathin.tvhome.action.WALLPAPER_CHANGED";
+
+    private final BroadcastReceiver wallpaperReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            updateWeatherAndWallpaper(false);
+        }
+    };
     /** Tiles per row and dock slots (res/values/config.xml, columns). Set in onCreate. */
     static int COLUMNS = 6;
     private boolean rtlAppGrid;
@@ -562,8 +570,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onStart();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(packageReceiver, packageFilter, Context.RECEIVER_NOT_EXPORTED);
+            registerReceiver(wallpaperReceiver, new IntentFilter(ACTION_WALLPAPER_CHANGED), Context.RECEIVER_NOT_EXPORTED);
         } else {
             registerReceiver(packageReceiver, packageFilter);
+            registerReceiver(wallpaperReceiver, new IntentFilter(ACTION_WALLPAPER_CHANGED));
         }
     }
 
@@ -696,6 +706,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     protected void onStop() {
         super.onStop();
         unregisterReceiver(packageReceiver);
+        try {
+            unregisterReceiver(wallpaperReceiver);
+        } catch (Exception ignored) {}
         rebuildOnResume = true;
     }
 
@@ -2082,11 +2095,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         SharedPreferences sp = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
         String mode;
         if (sp.contains("wallpaper_mode")) {
-            mode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_WEATHER);
+            mode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_RANDOM);
+            if ("weather".equals(mode)) mode = LauncherSettingsActivity.MODE_RANDOM;
         } else if (sp.contains("bing_wallpaper")) {
             mode = sp.getBoolean("bing_wallpaper", true) ? LauncherSettingsActivity.MODE_BING : LauncherSettingsActivity.MODE_OFF;
         } else {
-            mode = LauncherSettingsActivity.MODE_WEATHER;
+            mode = LauncherSettingsActivity.MODE_RANDOM;
         }
         return LauncherSettingsActivity.MODE_OFF.equals(mode);
     }
@@ -2106,11 +2120,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         SharedPreferences sp = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
         String mode;
         if (sp.contains("wallpaper_mode")) {
-            mode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_WEATHER);
+            mode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_RANDOM);
+            if ("weather".equals(mode)) mode = LauncherSettingsActivity.MODE_RANDOM;
         } else if (sp.contains("bing_wallpaper")) {
             mode = sp.getBoolean("bing_wallpaper", true) ? LauncherSettingsActivity.MODE_BING : LauncherSettingsActivity.MODE_OFF;
         } else {
-            mode = LauncherSettingsActivity.MODE_WEATHER;
+            mode = LauncherSettingsActivity.MODE_RANDOM;
         }
 
         if (ambient != null) {
@@ -2123,14 +2138,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
         }
 
-        if (LauncherSettingsActivity.MODE_WEATHER.equals(mode)) {
-            if (!wallpaperPlayer.hasWallpaper()) {
-                File cachedWeather = WeatherWallpaper.getCachedWallpaper(this);
-                if (cachedWeather != null) {
-                    wallpaperPlayer.setWallpaper(cachedWeather, 45);
-                } else {
-                    wallpaperPlayer.setWallpaperResource(R.drawable.wallpaper_default, 45);
-                }
+        if (LauncherSettingsActivity.MODE_RANDOM.equals(mode)) {
+            File cachedRandom = RandomWallpaper.getCachedWallpaper(this);
+            if (cachedRandom != null) {
+                wallpaperPlayer.setWallpaper(cachedRandom, 45);
+            } else if (!wallpaperPlayer.hasWallpaper()) {
+                wallpaperPlayer.setWallpaperResource(R.drawable.wallpaper_default, 45);
+                RandomWallpaper.pickNextRandom(this, file -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    if (file != null) {
+                        wallpaperPlayer.setWallpaper(file, 45);
+                    }
+                });
             }
             WeatherManager.fetch(this, force, info -> {
                 if (isFinishing() || isDestroyed()) return;
@@ -2149,19 +2168,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             });
             WeatherManager.fetch(this, force, info -> {
                 if (isFinishing() || isDestroyed()) return;
-                if (weatherInfo != null) {
-                    weatherInfo.setText(info.getSummary());
-                    weatherInfo.setVisibility(View.VISIBLE);
-                }
+                applyWeather(info);
             });
         } else {
             wallpaperPlayer.clearWallpaper();
             WeatherManager.fetch(this, force, info -> {
                 if (isFinishing() || isDestroyed()) return;
-                if (weatherInfo != null) {
-                    weatherInfo.setText(info.getSummary());
-                    weatherInfo.setVisibility(View.VISIBLE);
-                }
+                applyWeather(info);
             });
         }
     }
@@ -2171,14 +2184,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (weatherInfo != null) {
             weatherInfo.setText(info.getSummary());
             weatherInfo.setVisibility(View.VISIBLE);
-        }
-        SharedPreferences sp = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
-        String mode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_WEATHER);
-        if (LauncherSettingsActivity.MODE_WEATHER.equals(mode)) {
-            WeatherWallpaper.fetch(this, info.condition, info.isDay, file -> {
-                if (isFinishing() || isDestroyed()) return;
-                wallpaperPlayer.setWallpaper(file, 45);
-            });
         }
     }
 

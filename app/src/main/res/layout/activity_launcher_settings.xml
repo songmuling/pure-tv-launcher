@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FF101419"
+    android:background="#A6080B10"
     android:fillViewport="true">
 
     <LinearLayout
@@ -77,9 +77,9 @@
             android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/wallpaperModeWeather"
+                android:id="@+id/wallpaperModeRandom"
                 style="@style/SettingsColumnChoice"
-                android:text="@string/wallpaper_mode_weather" />
+                android:text="@string/wallpaper_mode_random" />
 
             <TextView
                 android:id="@+id/wallpaperModeBing"

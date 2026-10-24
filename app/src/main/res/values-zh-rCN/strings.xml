@@ -72,9 +72,12 @@
     <string name="restore_toast">已将“%1$s”恢复到桌面</string>
     <string name="wallpaper_mode_title">壁纸模式</string>
     <string name="wallpaper_mode_label">壁纸模式：%1$s</string>
-    <string name="wallpaper_mode_weather">动态天气风景</string>
+    <string name="wallpaper_mode_random">随机壁纸</string>
     <string name="wallpaper_mode_bing">必应每日高清</string>
     <string name="wallpaper_mode_off">默认极简主题</string>
+    <string name="wallpaper_random_switching">正在随机抽取壁纸…</string>
+    <string name="wallpaper_random_switched">已切换随机壁纸</string>
+    <string name="wallpaper_random_failed">壁纸获取失败，请检查网络</string>
     <string name="weather_city_label">天气城市：%1$s</string>
     <string name="weather_city_auto">🌐 自动定位 (基于IP)</string>
     <string name="weather_city_dialog_title">选择所在省份</string>

@@ -104,9 +104,12 @@
     <string name="restore_toast">Restored \"%1$s\" to Home</string>
     <string name="wallpaper_mode_title">Wallpaper Mode</string>
     <string name="wallpaper_mode_label">Wallpaper: %1$s</string>
-    <string name="wallpaper_mode_weather">Weather Dynamic</string>
+    <string name="wallpaper_mode_random">Random Wallpaper</string>
     <string name="wallpaper_mode_bing">Bing Daily</string>
     <string name="wallpaper_mode_off">Default Minimalist Theme</string>
+    <string name="wallpaper_random_switching">Switching random wallpaper…</string>
+    <string name="wallpaper_random_switched">Random wallpaper switched</string>
+    <string name="wallpaper_random_failed">Failed to fetch wallpaper</string>
     <string name="weather_city_label">Weather City: %1$s</string>
     <string name="weather_city_auto">Auto Detect (IP)</string>
     <string name="weather_city_dialog_title">Select Weather City</string>

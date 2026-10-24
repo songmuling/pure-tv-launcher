@@ -5,8 +5,11 @@ import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.view.Window;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -14,7 +17,8 @@ import android.widget.Toast;
 
 /** Remote-friendly settings owned by the launcher; system settings stay one row away. */
 public final class LauncherSettingsActivity extends Activity {
-    public static final String MODE_WEATHER = "weather";
+    public static final String MODE_RANDOM = "random";
+    public static final String MODE_WEATHER = "random"; // 向下兼容
     public static final String MODE_BING = "bing";
     public static final String MODE_OFF = "off";
 
@@ -22,7 +26,7 @@ public final class LauncherSettingsActivity extends Activity {
     private final TextView[] columnChoices = new TextView[4];
     private TextView animationsChoice;
     private TextView advancedChoice;
-    private TextView wallpaperModeWeather;
+    private TextView wallpaperModeRandom;
     private TextView wallpaperModeBing;
     private TextView wallpaperModeOff;
     private TextView weatherCityChoice;
@@ -37,6 +41,10 @@ public final class LauncherSettingsActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        Window window = getWindow();
+        if (window != null) {
+            window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        }
         setContentView(R.layout.activity_launcher_settings);
         choices = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
         Config config = Config.load(this);
@@ -86,21 +94,44 @@ public final class LauncherSettingsActivity extends Activity {
             }
         });
         if (choices.contains("wallpaper_mode")) {
-            wallpaperMode = choices.getString("wallpaper_mode", MODE_WEATHER);
+            wallpaperMode = choices.getString("wallpaper_mode", MODE_RANDOM);
+            if ("weather".equals(wallpaperMode)) wallpaperMode = MODE_RANDOM;
         } else if (choices.contains("bing_wallpaper")) {
             wallpaperMode = choices.getBoolean("bing_wallpaper", true) ? MODE_BING : MODE_OFF;
         } else {
-            wallpaperMode = MODE_WEATHER;
+            wallpaperMode = MODE_RANDOM;
         }
 
-
-        wallpaperModeWeather = findViewById(R.id.wallpaperModeWeather);
+        wallpaperModeRandom = findViewById(R.id.wallpaperModeRandom);
         wallpaperModeBing = findViewById(R.id.wallpaperModeBing);
         wallpaperModeOff = findViewById(R.id.wallpaperModeOff);
 
-        wallpaperModeWeather.setOnClickListener(v -> setWallpaperMode(MODE_WEATHER));
-        wallpaperModeBing.setOnClickListener(v -> setWallpaperMode(MODE_BING));
-        wallpaperModeOff.setOnClickListener(v -> setWallpaperMode(MODE_OFF));
+        wallpaperModeRandom.setOnClickListener(v -> {
+            wallpaperMode = MODE_RANDOM;
+            choices.edit().putString("wallpaper_mode", MODE_RANDOM).apply();
+            setResult(RESULT_OK);
+            refresh();
+
+            // 无论之前是否是随机壁纸，每次遥控器点选它，都立即从 Bing 随机取一张新壁纸！支持重复点选换壁纸
+            Toast.makeText(this, R.string.wallpaper_random_switching, Toast.LENGTH_SHORT).show();
+            RandomWallpaper.pickNextRandom(this, file -> {
+                if (isFinishing() || isDestroyed()) return;
+                if (file != null) {
+                    Toast.makeText(this, R.string.wallpaper_random_switched, Toast.LENGTH_SHORT).show();
+                    sendBroadcast(new Intent(MainActivity.ACTION_WALLPAPER_CHANGED));
+                } else {
+                    Toast.makeText(this, R.string.wallpaper_random_failed, Toast.LENGTH_SHORT).show();
+                }
+            });
+        });
+        wallpaperModeBing.setOnClickListener(v -> {
+            setWallpaperMode(MODE_BING);
+            sendBroadcast(new Intent(MainActivity.ACTION_WALLPAPER_CHANGED));
+        });
+        wallpaperModeOff.setOnClickListener(v -> {
+            setWallpaperMode(MODE_OFF);
+            sendBroadcast(new Intent(MainActivity.ACTION_WALLPAPER_CHANGED));
+        });
 
         weatherCityChoice = findViewById(R.id.weatherCityChoice);
         weatherCityChoice.setOnClickListener(v -> showCityDialog());
@@ -115,9 +146,10 @@ public final class LauncherSettingsActivity extends Activity {
             columns = current.columns;
             animations = current.animations;
             advancedEffects = current.animations && current.advancedEffects;
-            wallpaperMode = MODE_WEATHER;
+            wallpaperMode = MODE_RANDOM;
             setResult(RESULT_OK);
             refresh();
+            sendBroadcast(new Intent(MainActivity.ACTION_WALLPAPER_CHANGED));
         });
         findViewById(R.id.defaultHomeChoice).setOnClickListener(v -> {
             Toast.makeText(this, R.string.home_settings_help, Toast.LENGTH_LONG).show();
@@ -247,13 +279,13 @@ public final class LauncherSettingsActivity extends Activity {
         advancedChoice.setEnabled(animations);
         advancedChoice.setAlpha(animations ? 1f : 0.5f);
 
-        boolean isWeather = MODE_WEATHER.equals(wallpaperMode);
+        boolean isRandom = MODE_RANDOM.equals(wallpaperMode) || "weather".equals(wallpaperMode);
         boolean isBing = MODE_BING.equals(wallpaperMode);
         boolean isOff = MODE_OFF.equals(wallpaperMode);
-        wallpaperModeWeather.setSelected(isWeather);
+        wallpaperModeRandom.setSelected(isRandom);
         wallpaperModeBing.setSelected(isBing);
         wallpaperModeOff.setSelected(isOff);
-        wallpaperModeWeather.setText((isWeather ? "● " : "○ ") + getString(R.string.wallpaper_mode_weather));
+        wallpaperModeRandom.setText((isRandom ? "● " : "○ ") + getString(R.string.wallpaper_mode_random));
         wallpaperModeBing.setText((isBing ? "● " : "○ ") + getString(R.string.wallpaper_mode_bing));
         wallpaperModeOff.setText((isOff ? "● " : "○ ") + getString(R.string.wallpaper_mode_off));
 
