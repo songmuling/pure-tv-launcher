@@ -323,7 +323,6 @@ final class AllAppsDialog extends Dialog {
         try {
             Intent intent = new Intent(Intent.ACTION_UNINSTALL_PACKAGE);
             intent.setData(Uri.parse("package:" + pkg));
-            intent.putExtra(Intent.EXTRA_RETURN_RESULT, true);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             activity.startActivity(intent);
             started = true;
@@ -341,10 +340,10 @@ final class AllAppsDialog extends Dialog {
 
         if (!started) {
             try {
-                Intent fallback = new Intent(Intent.ACTION_UNINSTALL_PACKAGE);
-                fallback.setData(Uri.parse("package:" + pkg));
-                fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                activity.startActivity(fallback);
+                Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                intent.setData(Uri.parse("package:" + pkg));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                activity.startActivity(intent);
                 started = true;
             } catch (Exception ex) {
                 Toast.makeText(activity, R.string.not_available, Toast.LENGTH_SHORT).show();
@@ -414,7 +413,7 @@ final class AllAppsDialog extends Dialog {
             holder.card.setOnClickListener(v -> {
                 if (isLaunchingApp) return;
                 isLaunchingApp = true;
-                v.postDelayed(() -> isLaunchingApp = false, 3000);
+                v.postDelayed(() -> isLaunchingApp = false, 1500);
 
                 Intent intent = new Intent(Intent.ACTION_MAIN)
                         .setComponent(item.component)
@@ -424,13 +423,6 @@ final class AllAppsDialog extends Dialog {
                 }
                 try {
                     activity.startActivity(intent);
-                    // 点击后不立即生硬关闭抽屉，避免目标应用冷启动时露出桌面；
-                    // 当应用界面完全覆盖前台后，由 MainActivity.onStop() 静默关闭抽屉。
-                    v.postDelayed(() -> {
-                        if (isShowing()) {
-                            dismiss();
-                        }
-                    }, 2500);
                 } catch (Exception ignored) {
                     isLaunchingApp = false;
                 }

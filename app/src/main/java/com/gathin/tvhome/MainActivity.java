@@ -695,9 +695,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onStop() {
         super.onStop();
-        if (currentAllAppsDialog != null && currentAllAppsDialog.isShowing()) {
-            currentAllAppsDialog.dismiss();
-        }
         unregisterReceiver(packageReceiver);
         rebuildOnResume = true;
     }
