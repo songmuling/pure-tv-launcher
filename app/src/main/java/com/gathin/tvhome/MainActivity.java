@@ -577,7 +577,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         grid.scrollToPosition(0);
         lastFocused = 0;
         lastFocusedKey = adapter.getItemCount() > 0 ? adapter.keyAt(0) : null;
-        rebuildOnResume = true;
+        focusTile(0);
     }
 
     @Override
@@ -2164,11 +2164,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
 
         if (LauncherSettingsActivity.MODE_WEATHER.equals(mode)) {
-            File cachedWeather = WeatherWallpaper.getCachedWallpaper(this);
-            if (cachedWeather != null) {
-                wallpaperPlayer.setWallpaper(cachedWeather, 45);
-            } else if (!wallpaperPlayer.hasWallpaper()) {
-                wallpaperPlayer.setWallpaperResource(R.drawable.wallpaper_default, 45);
+            if (!wallpaperPlayer.hasWallpaper()) {
+                File cachedWeather = WeatherWallpaper.getCachedWallpaper(this);
+                if (cachedWeather != null) {
+                    wallpaperPlayer.setWallpaper(cachedWeather, 45);
+                } else {
+                    wallpaperPlayer.setWallpaperResource(R.drawable.wallpaper_default, 45);
+                }
             }
             WeatherManager.fetch(this, force, info -> {
                 if (isFinishing() || isDestroyed()) return;

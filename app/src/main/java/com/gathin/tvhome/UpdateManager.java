@@ -97,6 +97,10 @@ public final class UpdateManager {
     }
 
     private static void setupTrustAllSsl(HttpURLConnection conn) {
+        // Android 8.0 (API 26) 及以上拥有完整现代 CA 根证书与原生 SNI 扩展，切勿覆盖避免破坏 TLS 握手
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            return;
+        }
         if (conn instanceof HttpsURLConnection) {
             try {
                 TrustManager[] trustAllCerts = new TrustManager[]{
@@ -172,6 +176,7 @@ public final class UpdateManager {
      */
     public static void checkUpdate(Context context, Callback callback) {
         final Context appCtx = context.getApplicationContext();
+        final boolean isSkyworth = appCtx.getPackageName().contains("ktcp");
         new Thread(() -> {
             HttpURLConnection conn = null;
             BufferedReader reader = null;
@@ -180,13 +185,16 @@ public final class UpdateManager {
                 conn = (HttpURLConnection) url.openConnection();
                 setupTrustAllSsl(conn);
                 conn.setRequestMethod("GET");
-                conn.setRequestProperty("User-Agent", "PureTV-Launcher");
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android " + Build.VERSION.RELEASE + "; " + Build.MODEL + ") PureTV-Launcher");
                 conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
-                conn.setConnectTimeout(8000);
-                conn.setReadTimeout(8000);
+                conn.setConnectTimeout(10000);
+                conn.setReadTimeout(10000);
 
-                if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
-                    MAIN_HANDLER.post(() -> callback.onResult(new UpdateInfo("", 0, "", "", false)));
+                int code = conn.getResponseCode();
+                if (code != HttpURLConnection.HTTP_OK) {
+                    android.util.Log.w("UpdateManager", "GitHub API response: " + code + ", trying redirect fallback");
+                    UpdateInfo fallback = checkUpdateViaRedirect(appCtx, isSkyworth);
+                    MAIN_HANDLER.post(() -> callback.onResult(fallback != null ? fallback : new UpdateInfo("", 0, "", "", false)));
                     return;
                 }
 
@@ -203,7 +211,6 @@ public final class UpdateManager {
                 JSONArray assets = json.optJSONArray("assets");
 
                 int remoteRunNumber = parseRunNumber(tagName);
-                boolean isSkyworth = appCtx.getPackageName().contains("ktcp");
                 String downloadUrl = "";
 
                 if (assets != null) {
@@ -227,12 +234,47 @@ public final class UpdateManager {
                 MAIN_HANDLER.post(() -> callback.onResult(info));
 
             } catch (Exception e) {
-                MAIN_HANDLER.post(() -> callback.onResult(new UpdateInfo("", 0, "", "", false)));
+                android.util.Log.w("UpdateManager", "GitHub API check error: " + e.getMessage() + ", trying redirect fallback");
+                UpdateInfo fallback = checkUpdateViaRedirect(appCtx, isSkyworth);
+                MAIN_HANDLER.post(() -> callback.onResult(fallback != null ? fallback : new UpdateInfo("", 0, "", "", false)));
             } finally {
                 try { if (reader != null) reader.close(); } catch (Exception ignored) {}
                 if (conn != null) conn.disconnect();
             }
         }).start();
+    }
+
+    private static UpdateInfo checkUpdateViaRedirect(Context context, boolean isSkyworth) {
+        HttpURLConnection conn = null;
+        try {
+            URL url = new URL("https://github.com/songmuling/pure-tv-launcher/releases/latest");
+            conn = (HttpURLConnection) url.openConnection();
+            setupTrustAllSsl(conn);
+            conn.setRequestMethod("GET");
+            conn.setInstanceFollowRedirects(false);
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android " + Build.VERSION.RELEASE + "; " + Build.MODEL + ") PureTV-Launcher");
+            conn.setConnectTimeout(12000);
+            conn.setReadTimeout(12000);
+
+            int code = conn.getResponseCode();
+            if (code == HttpURLConnection.HTTP_MOVED_TEMP || code == HttpURLConnection.HTTP_MOVED_PERM || code == 307 || code == 308) {
+                String location = conn.getHeaderField("Location");
+                if (location != null && location.contains("/releases/tag/")) {
+                    String tagName = location.substring(location.lastIndexOf('/') + 1).trim();
+                    int remoteRunNumber = parseRunNumber(tagName);
+                    String fileName = isSkyworth ? "PureTV-Skyworth-release.apk" : "PureTV-Universal-release.apk";
+                    String downloadUrl = "https://github.com/songmuling/pure-tv-launcher/releases/download/" + tagName + "/" + fileName;
+                    int localCode = getCurrentVersionCode(context);
+                    boolean hasUpdate = (remoteRunNumber > localCode) || (localCode < 42 && remoteRunNumber >= 42);
+                    return new UpdateInfo(tagName, remoteRunNumber, "· 修复桌面按Home键壁纸闪烁问题\n· 优化电视端网络更新检测与兼容性", downloadUrl, hasUpdate);
+                }
+            }
+        } catch (Exception e) {
+            android.util.Log.w("UpdateManager", "checkUpdateViaRedirect error: " + e.getMessage());
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+        return null;
     }
 
     private static int parseRunNumber(String tagName) {

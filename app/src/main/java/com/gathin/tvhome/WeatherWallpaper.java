@@ -79,11 +79,23 @@ public final class WeatherWallpaper {
 
     private WeatherWallpaper() {}
 
+    private static final String PREF_NAME = "weather_wallpaper_pref";
+    private static final String KEY_LAST_WALLPAPER = "last_weather_wallpaper_path";
+
     /**
      * 获取本地已有的最新天气壁纸缓存文件（如果有），用于毫秒级首帧直接展示
      */
     public static File getCachedWallpaper(Context context) {
         try {
+            android.content.SharedPreferences sp = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+            String lastPath = sp.getString(KEY_LAST_WALLPAPER, null);
+            if (lastPath != null) {
+                File lastFile = new File(lastPath);
+                if (lastFile.exists() && lastFile.length() > 30000) {
+                    return lastFile;
+                }
+            }
+
             File cacheDir = new File(context.getFilesDir(), "weather_wallpapers");
             if (!cacheDir.exists()) return null;
             File[] files = cacheDir.listFiles();
@@ -122,6 +134,8 @@ public final class WeatherWallpaper {
 
                 // 命中本地缓存且大小大于 30KB 则直接使用
                 if (targetFile.exists() && targetFile.length() > 30000) {
+                    context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE).edit()
+                            .putString(KEY_LAST_WALLPAPER, targetFile.getAbsolutePath()).apply();
                     if (callback != null) {
                         new Handler(Looper.getMainLooper()).post(() -> callback.onReady(targetFile));
                     }
@@ -136,6 +150,8 @@ public final class WeatherWallpaper {
                     if (targetFile.exists()) targetFile.delete();
                     tempFile.renameTo(targetFile);
                     trimCache(cacheDir, 16);
+                    context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE).edit()
+                            .putString(KEY_LAST_WALLPAPER, targetFile.getAbsolutePath()).apply();
                     if (callback != null) {
                         new Handler(Looper.getMainLooper()).post(() -> callback.onReady(targetFile));
                     }
