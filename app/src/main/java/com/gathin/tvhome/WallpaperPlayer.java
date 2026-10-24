@@ -176,8 +176,12 @@ final class WallpaperPlayer {
     private String currentFilePath = "";
 
     void setWallpaper(File file, int dim) {
+        setWallpaper(file, dim, false);
+    }
+
+    void setWallpaper(File file, int dim, boolean force) {
         if (file == null || !file.exists() || closed) return;
-        if (file.getAbsolutePath().equals(currentFilePath)) return;
+        if (!force && file.getAbsolutePath().equals(currentFilePath)) return;
         currentFilePath = file.getAbsolutePath();
         currentResId = -1;
         decoder.execute(() -> {

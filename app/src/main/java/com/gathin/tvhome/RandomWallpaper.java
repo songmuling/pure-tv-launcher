@@ -71,6 +71,8 @@ public final class RandomWallpaper {
             "https://cn.bing.com/th?id=OHR.NebraskaStorm_EN-US1163295363_1920x1080.jpg"      // 暴雨闪电与昏暗暮云
     };
 
+    private static final String KEY_SLOT = "random_wallpaper_slot";
+
     public interface Callback {
         void onReady(File file);
     }
@@ -82,16 +84,26 @@ public final class RandomWallpaper {
      */
     public static File getCachedWallpaper(Context context) {
         if (context == null) return null;
-        File file = new File(context.getFilesDir(), "random_wallpaper.jpg");
-        if (file.exists() && file.length() > 30000) {
-            return file;
+        SharedPreferences prefs = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
+        int slot = prefs.getInt(KEY_SLOT, 0);
+        File current = new File(context.getFilesDir(), "random_wallpaper_" + slot + ".jpg");
+        if (current.exists() && current.length() > 30000) {
+            return current;
+        }
+        File other = new File(context.getFilesDir(), "random_wallpaper_" + (1 - slot) + ".jpg");
+        if (other.exists() && other.length() > 30000) {
+            return other;
+        }
+        File legacy = new File(context.getFilesDir(), "random_wallpaper.jpg");
+        if (legacy.exists() && legacy.length() > 30000) {
+            return legacy;
         }
         return null;
     }
 
     /**
      * 随机选择下一张必应壁纸并异步下载保存
-     * 每次点选都保证选到一张与当前不同的壁纸
+     * 每次点选都保证选到一张与当前不同的壁纸，且文件路径交替保证必定刷新
      */
     public static void pickNextRandom(Context context, Callback callback) {
         if (context == null) return;
@@ -102,6 +114,8 @@ public final class RandomWallpaper {
             try {
                 SharedPreferences prefs = appContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
                 String lastUrl = prefs.getString(KEY_LAST_URL, "");
+                int currentSlot = prefs.getInt(KEY_SLOT, 0);
+                int nextSlot = 1 - currentSlot;
 
                 List<String> pool = new ArrayList<>(Arrays.asList(BING_PHOTO_POOL));
 
@@ -128,11 +142,11 @@ public final class RandomWallpaper {
                     return;
                 }
 
-                Log.d(TAG, "Downloading random Bing wallpaper: " + chosenUrl);
-                File downloadedFile = downloadWallpaper(appContext, chosenUrl);
+                Log.d(TAG, "Downloading random Bing wallpaper to slot " + nextSlot + ": " + chosenUrl);
+                File downloadedFile = downloadWallpaper(appContext, chosenUrl, nextSlot);
 
                 if (downloadedFile != null && downloadedFile.exists() && downloadedFile.length() > 30000) {
-                    prefs.edit().putString(KEY_LAST_URL, chosenUrl).apply();
+                    prefs.edit().putString(KEY_LAST_URL, chosenUrl).putInt(KEY_SLOT, nextSlot).apply();
                     mainHandler.post(() -> {
                         if (callback != null) callback.onReady(downloadedFile);
                     });
@@ -191,12 +205,12 @@ public final class RandomWallpaper {
         }
     }
 
-    private static File downloadWallpaper(Context context, String imageUrl) {
+    private static File downloadWallpaper(Context context, String imageUrl, int slot) {
         HttpURLConnection conn = null;
         InputStream in = null;
         FileOutputStream out = null;
         File tempFile = new File(context.getFilesDir(), "random_wallpaper.tmp");
-        File targetFile = new File(context.getFilesDir(), "random_wallpaper.jpg");
+        File targetFile = new File(context.getFilesDir(), "random_wallpaper_" + slot + ".jpg");
 
         try {
             URL url = new URL(imageUrl);

@@ -417,7 +417,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         });
         btnSettings.setOnClickListener(v -> open(systemIntent(Settings.ACTION_SETTINGS)));
         btnSettings.setOnLongClickListener(v -> {
-            startActivityForResult(new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST);
+            showLauncherSettings();
             return true;
         });
         btnReorder = findViewById(R.id.btnReorder);
@@ -542,7 +542,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean openLauncherSettingsIfAsked(Intent intent) {
         if (intent == null || !ACTION_LAUNCHER_SETTINGS.equals(intent.getAction())) return false;
         setIntent(new Intent(Intent.ACTION_MAIN));
-        startActivityForResult(new Intent(this, LauncherSettingsActivity.class), LAUNCHER_SETTINGS_REQUEST);
+        showLauncherSettings();
         return true;
     }
 
@@ -556,6 +556,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         super.onNewIntent(intent);
         if (currentAllAppsDialog != null && currentAllAppsDialog.isShowing()) {
             currentAllAppsDialog.dismiss();
+        }
+        if (currentSettingsDialog != null && currentSettingsDialog.isShowing()) {
+            currentSettingsDialog.dismiss();
         }
         if (openLauncherSettingsIfAsked(intent)) return;
         if (intent == null || !intent.hasCategory(Intent.CATEGORY_HOME)) return;
@@ -700,6 +703,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (cardPrompt != null) cardPrompt.dismiss();
         if (appLibrary != null) appLibrary.close();
         if (openPopup != null) openPopup.dismiss();
+        if (currentSettingsDialog != null && currentSettingsDialog.isShowing()) {
+            currentSettingsDialog.dismiss();
+        }
     }
 
     @Override
@@ -1149,6 +1155,30 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             if (btnAllApps != null) btnAllApps.requestFocus();
         });
         currentAllAppsDialog.show();
+    }
+
+    private LauncherSettingsDialog currentSettingsDialog;
+
+    private void showLauncherSettings() {
+        if (currentSettingsDialog != null && currentSettingsDialog.isShowing()) return;
+        setDesktopForegroundVisible(false);
+        currentSettingsDialog = new LauncherSettingsDialog(this, new LauncherSettingsDialog.Callback() {
+            @Override
+            public void onDismissed(boolean configChanged) {
+                currentSettingsDialog = null;
+                setDesktopForegroundVisible(true);
+                if (configChanged) {
+                    rebuildOnResume = true;
+                    reloadApps(false);
+                }
+            }
+
+            @Override
+            public void onWallpaperChanged() {
+                updateWeatherAndWallpaper(false);
+            }
+        });
+        currentSettingsDialog.show();
     }
 
     @Override
@@ -2141,13 +2171,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (LauncherSettingsActivity.MODE_RANDOM.equals(mode)) {
             File cachedRandom = RandomWallpaper.getCachedWallpaper(this);
             if (cachedRandom != null) {
-                wallpaperPlayer.setWallpaper(cachedRandom, 45);
+                wallpaperPlayer.setWallpaper(cachedRandom, 45, true);
             } else if (!wallpaperPlayer.hasWallpaper()) {
                 wallpaperPlayer.setWallpaperResource(R.drawable.wallpaper_default, 45);
                 RandomWallpaper.pickNextRandom(this, file -> {
                     if (isFinishing() || isDestroyed()) return;
                     if (file != null) {
-                        wallpaperPlayer.setWallpaper(file, 45);
+                        wallpaperPlayer.setWallpaper(file, 45, true);
                     }
                 });
             }
