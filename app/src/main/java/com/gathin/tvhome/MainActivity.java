@@ -177,8 +177,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** Tile order when reorder mode started, to save only when something moved. */
     private List<String> orderAtStart;
     private View btnReorder;
-    private View btnUpdate;
-    private boolean updateFound = false;
     /** dock_apps as loaded (config.xml or a theme): a saved Order only applies while these are unchanged. */
     private List<String> dockApps;
     /** fill_dock false: the dock can have empty slots, which reorder mode leaves out and restores afterwards. */
@@ -197,7 +195,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         @Override
         public void onAvailable(@NonNull Network network) {
             handler.post(MainActivity.this::updateWifiLabel);
-            handler.post(MainActivity.this::checkAppUpdate);
         }
 
         @Override
@@ -418,10 +415,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnReorder = findViewById(R.id.btnReorder);
         btnReorder.setOnClickListener(v -> toggleReorder());
         btnReorder.setVisibility(View.GONE);
-        btnUpdate = findViewById(R.id.btnUpdate);
-        if (btnUpdate != null) {
-            btnUpdate.setVisibility(View.GONE);
-        }
         btnAllApps = findViewById(R.id.btnAllApps);
         if (btnAllApps != null) {
             btnAllApps.setOnClickListener(v -> showAllApps());
@@ -455,8 +448,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 return true;
             }
             View[] order = rtlMenuBar
-                    ? new View[]{btnSettings, btnUpdate, btnReorder, btnWifi, btnInputs}
-                    : new View[]{btnInputs, btnWifi, btnReorder, btnUpdate, btnSettings};
+                    ? new View[]{btnSettings, btnReorder, btnWifi, btnInputs}
+                    : new View[]{btnInputs, btnWifi, btnReorder, btnSettings};
             java.util.List<View> visibleButtons = new java.util.ArrayList<>();
             for (View b : order) {
                 if (b != null && b.getVisibility() == View.VISIBLE && b.isFocusable()) {
@@ -484,11 +477,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         };
         btnInputs.setOnKeyListener(pillKeys);
         btnWifi.setOnKeyListener(pillKeys);
-        if (btnUpdate != null) btnUpdate.setOnKeyListener(pillKeys);
         btnSettings.setOnKeyListener(pillKeys);
         btnReorder.setOnKeyListener(pillKeys);
         if (advancedEffects) {
-            for (View button : new View[]{btnInputs, btnWifi, btnReorder, btnUpdate, btnSettings}) {
+            for (View button : new View[]{btnInputs, btnWifi, btnReorder, btnSettings}) {
                 if (button != null) {
                     button.setOnFocusChangeListener((view, focused) -> view.animate()
                             .scaleX(focused ? 1.04f : 1f).scaleY(focused ? 1.04f : 1f)
@@ -537,21 +529,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         // Not after recreate(): the launch intent survives it and would open the settings again.
         if (savedInstanceState == null) openLauncherSettingsIfAsked(getIntent());
-        handler.postDelayed(this::checkAppUpdate, 3500);
-    }
-
-    private void checkAppUpdate() {
-        if (updateFound) return;
-        UpdateManager.checkUpdate(this, info -> {
-            if (isFinishing() || isDestroyed()) return;
-            if (info != null && info.hasUpdate && btnUpdate != null) {
-                updateFound = true;
-                btnUpdate.setVisibility(View.VISIBLE);
-                btnUpdate.setOnClickListener(v -> UpdateManager.showUpdateDialog(MainActivity.this, info));
-            } else if (btnUpdate != null && !updateFound) {
-                btnUpdate.setVisibility(View.GONE);
-            }
-        });
     }
 
     private boolean openLauncherSettingsIfAsked(Intent intent) {
@@ -1544,30 +1521,15 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
             if (position < COLUMNS) {
                 View target;
-                boolean hasInputs = btnInputs != null && btnInputs.getVisibility() == View.VISIBLE;
-                boolean hasUpdate = btnUpdate != null && btnUpdate.getVisibility() == View.VISIBLE;
-                View settingsView = findViewById(R.id.btnSettings);
-
                 if (position >= 5) {
-                    target = settingsView;
-                } else if (position >= 3) {
-                    if (hasUpdate) {
-                        target = btnUpdate;
-                    } else if (hasInputs) {
-                        target = btnInputs;
-                    } else {
-                        target = settingsView;
+                    target = findViewById(R.id.btnSettings);
+                    if (target == null || target.getVisibility() != View.VISIBLE) {
+                        target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs : null;
                     }
                 } else {
-                    if (hasInputs) {
-                        target = btnInputs;
-                    } else if (hasUpdate) {
-                        target = btnUpdate;
-                    } else {
-                        target = settingsView;
-                    }
+                    target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs : findViewById(R.id.btnSettings);
                 }
-                if (target != null && target.getVisibility() == View.VISIBLE && target.requestFocus()) {
+                if (target != null && target.requestFocus()) {
                     grid.playSoundEffect(SoundEffectConstants.NAVIGATION_UP);
                     return true;
                 }
@@ -1594,9 +1556,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override public void onLibraryUp() {
         if (adapter.appCount() == 0) {
-            View target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs
-                    : (btnUpdate != null && btnUpdate.getVisibility() == View.VISIBLE) ? btnUpdate
-                    : findViewById(R.id.btnSettings);
+            View target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs : findViewById(R.id.btnSettings);
             if (target != null) target.requestFocus();
             return;
         }

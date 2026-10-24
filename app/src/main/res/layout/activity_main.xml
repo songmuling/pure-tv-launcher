@@ -237,13 +237,6 @@
                     android:visibility="gone"
                     android:nextFocusDown="@+id/grid" />
 
-                <TextView
-                    android:id="@+id/btnUpdate"
-                    style="@style/TopButtonIcon"
-                    android:contentDescription="@string/update_available"
-                    android:drawableStart="@drawable/ic_system_update"
-                    android:visibility="gone"
-                    android:nextFocusDown="@+id/grid" />
 
                 <TextView
                     android:id="@+id/btnSettings"
