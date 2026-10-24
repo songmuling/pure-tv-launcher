@@ -30,8 +30,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.cert.X509Certificate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 /**
  * 负责从 GitHub Releases 检测新版本、下载对应机型 APK 并通过 FileProvider 拉起系统安装。
@@ -90,6 +96,24 @@ public final class UpdateManager {
         }
     }
 
+    private static void setupTrustAllSsl(HttpURLConnection conn) {
+        if (conn instanceof HttpsURLConnection) {
+            try {
+                TrustManager[] trustAllCerts = new TrustManager[]{
+                    new X509TrustManager() {
+                        public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+                        public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+                        public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+                    }
+                };
+                SSLContext sc = SSLContext.getInstance("TLS");
+                sc.init(null, trustAllCerts, new java.security.SecureRandom());
+                ((HttpsURLConnection) conn).setSSLSocketFactory(sc.getSocketFactory());
+                ((HttpsURLConnection) conn).setHostnameVerifier((hostname, session) -> true);
+            } catch (Exception ignored) {}
+        }
+    }
+
     /**
      * 异步后台检测 GitHub 是否有更新
      */
@@ -101,6 +125,7 @@ public final class UpdateManager {
             try {
                 URL url = new URL(GITHUB_RELEASES_API);
                 conn = (HttpURLConnection) url.openConnection();
+                setupTrustAllSsl(conn);
                 conn.setRequestMethod("GET");
                 conn.setRequestProperty("User-Agent", "PureTV-Launcher");
                 conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
@@ -256,6 +281,7 @@ public final class UpdateManager {
             try {
                 URL url = new URL(downloadUrl);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                setupTrustAllSsl(conn);
                 conn.setRequestProperty("User-Agent", "PureTV-Launcher");
                 conn.setConnectTimeout(15000);
                 conn.setReadTimeout(15000);
@@ -269,6 +295,7 @@ public final class UpdateManager {
                     conn.disconnect();
                     url = new URL(redirectUrl);
                     conn = (HttpURLConnection) url.openConnection();
+                    setupTrustAllSsl(conn);
                     conn.setRequestProperty("User-Agent", "PureTV-Launcher");
                     conn.setConnectTimeout(15000);
                     conn.setReadTimeout(15000);

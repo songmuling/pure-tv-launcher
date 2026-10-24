@@ -178,6 +178,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private List<String> orderAtStart;
     private View btnReorder;
     private View btnUpdate;
+    private boolean updateFound = false;
     /** dock_apps as loaded (config.xml or a theme): a saved Order only applies while these are unchanged. */
     private List<String> dockApps;
     /** fill_dock false: the dock can have empty slots, which reorder mode leaves out and restores afterwards. */
@@ -196,6 +197,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         @Override
         public void onAvailable(@NonNull Network network) {
             handler.post(MainActivity.this::updateWifiLabel);
+            handler.post(MainActivity.this::checkAppUpdate);
         }
 
         @Override
@@ -513,16 +515,18 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         // Not after recreate(): the launch intent survives it and would open the settings again.
         if (savedInstanceState == null) openLauncherSettingsIfAsked(getIntent());
-        checkAppUpdate();
+        handler.postDelayed(this::checkAppUpdate, 3500);
     }
 
     private void checkAppUpdate() {
+        if (updateFound) return;
         UpdateManager.checkUpdate(this, info -> {
             if (isFinishing() || isDestroyed()) return;
             if (info != null && info.hasUpdate && btnUpdate != null) {
+                updateFound = true;
                 btnUpdate.setVisibility(View.VISIBLE);
                 btnUpdate.setOnClickListener(v -> UpdateManager.showUpdateDialog(MainActivity.this, info));
-            } else if (btnUpdate != null) {
+            } else if (btnUpdate != null && !updateFound) {
                 btnUpdate.setVisibility(View.GONE);
             }
         });
