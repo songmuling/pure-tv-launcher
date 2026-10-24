@@ -695,6 +695,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onStop() {
         super.onStop();
+        if (currentAllAppsDialog != null && currentAllAppsDialog.isShowing()) {
+            currentAllAppsDialog.dismiss();
+        }
         unregisterReceiver(packageReceiver);
         rebuildOnResume = true;
     }
@@ -2175,7 +2178,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         SharedPreferences sp = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
         String mode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_WEATHER);
         if (LauncherSettingsActivity.MODE_WEATHER.equals(mode)) {
-            WeatherWallpaper.fetch(this, info.condition, file -> {
+            WeatherWallpaper.fetch(this, info.condition, info.isDay, file -> {
                 if (isFinishing() || isDestroyed()) return;
                 wallpaperPlayer.setWallpaper(file, 45);
             });

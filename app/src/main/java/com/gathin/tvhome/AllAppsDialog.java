@@ -244,6 +244,8 @@ final class AllAppsDialog extends Dialog {
         return width <= 0 || height <= 0 || width >= height * 1.4f;
     }
 
+    private boolean isLaunchingApp = false;
+
     private boolean isSystemApp(String pkg) {
         try {
             ApplicationInfo ai = activity.getPackageManager().getApplicationInfo(pkg, 0);
@@ -253,11 +255,24 @@ final class AllAppsDialog extends Dialog {
         }
     }
 
+    private boolean isUpdatedSystemApp(String pkg) {
+        try {
+            ApplicationInfo ai = activity.getPackageManager().getApplicationInfo(pkg, 0);
+            return (ai.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private void showAppActionDialog(AppItem item) {
         boolean isSystem = isSystemApp(item.pkg);
+        boolean isUpdatedSystem = isUpdatedSystemApp(item.pkg);
+
         List<String> options = new ArrayList<>();
-        if (!isSystem) {
+        if (!isSystem || isUpdatedSystem) {
             options.add(activity.getString(R.string.all_apps_uninstall));
+        } else {
+            options.add(activity.getString(R.string.all_apps_uninstall) + " (系统内置)");
         }
         options.add(activity.getString(R.string.all_apps_details));
 
@@ -265,8 +280,12 @@ final class AllAppsDialog extends Dialog {
                 .setTitle(item.label)
                 .setItems(options.toArray(new CharSequence[0]), (d, which) -> {
                     String selected = options.get(which);
-                    if (selected.equals(activity.getString(R.string.all_apps_uninstall))) {
-                        requestUninstall(item.pkg);
+                    if (selected.startsWith(activity.getString(R.string.all_apps_uninstall))) {
+                        if (isSystem && !isUpdatedSystem) {
+                            Toast.makeText(activity, R.string.all_apps_system_toast, Toast.LENGTH_LONG).show();
+                        } else {
+                            requestUninstall(item.pkg);
+                        }
                     } else if (selected.equals(activity.getString(R.string.all_apps_details))) {
                         openAppDetails(item.pkg);
                     }
@@ -277,14 +296,16 @@ final class AllAppsDialog extends Dialog {
 
     private void requestUninstall(String pkg) {
         try {
-            Intent intent = new Intent(Intent.ACTION_UNINSTALL_PACKAGE);
+            Intent intent = new Intent(Intent.ACTION_DELETE);
             intent.setData(Uri.parse("package:" + pkg));
-            intent.putExtra(Intent.EXTRA_RETURN_RESULT, true);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             activity.startActivity(intent);
         } catch (Exception e) {
             try {
-                Intent deleteIntent = new Intent(Intent.ACTION_DELETE, Uri.parse("package:" + pkg));
-                activity.startActivity(deleteIntent);
+                Intent fallback = new Intent(Intent.ACTION_UNINSTALL_PACKAGE);
+                fallback.setData(Uri.parse("package:" + pkg));
+                fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                activity.startActivity(fallback);
             } catch (Exception ex) {
                 Toast.makeText(activity, R.string.not_available, Toast.LENGTH_SHORT).show();
             }
@@ -351,6 +372,10 @@ final class AllAppsDialog extends Dialog {
             }
 
             holder.card.setOnClickListener(v -> {
+                if (isLaunchingApp) return;
+                isLaunchingApp = true;
+                v.postDelayed(() -> isLaunchingApp = false, 3000);
+
                 Intent intent = new Intent(Intent.ACTION_MAIN)
                         .setComponent(item.component)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
@@ -359,16 +384,82 @@ final class AllAppsDialog extends Dialog {
                 }
                 try {
                     activity.startActivity(intent);
-                    dismiss();
-                } catch (Exception ignored) {}
+                    // 点击后不立即生硬关闭抽屉，避免目标应用冷启动时露出桌面；
+                    // 当应用界面完全覆盖前台后，由 MainActivity.onStop() 静默关闭抽屉。
+                    v.postDelayed(() -> {
+                        if (isShowing()) {
+                            dismiss();
+                        }
+                    }, 2500);
+                } catch (Exception ignored) {
+                    isLaunchingApp = false;
+                }
             });
 
+            // 触屏 / 空鼠 / 鼠标长按兜底
             holder.card.setOnLongClickListener(v -> {
                 showAppActionDialog(item);
                 return true;
             });
 
+            // 电视遥控器按键处理：菜单键（KEYCODE_MENU）直接管理；确认键长按检测与拦截
+            holder.card.setOnKeyListener((v, keyCode, event) -> {
+                if (keyCode == KeyEvent.KEYCODE_MENU) {
+                    if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0) {
+                        showAppActionDialog(item);
+                        return true;
+                    }
+                    return true;
+                }
+
+                if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) {
+                    if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                        if (event.getRepeatCount() == 0) {
+                            holder.handledLongPress = false;
+                            if (holder.longPressRunnable != null) {
+                                v.removeCallbacks(holder.longPressRunnable);
+                            }
+                            holder.longPressRunnable = () -> {
+                                holder.handledLongPress = true;
+                                v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                                showAppActionDialog(item);
+                            };
+                            v.postDelayed(holder.longPressRunnable, android.view.ViewConfiguration.getLongPressTimeout());
+                        } else if (!holder.handledLongPress && event.getRepeatCount() >= 5) {
+                            // 针对快速派发 repeatCount 的电视遥控器驱动兜底
+                            if (holder.longPressRunnable != null) {
+                                v.removeCallbacks(holder.longPressRunnable);
+                                holder.longPressRunnable = null;
+                            }
+                            holder.handledLongPress = true;
+                            v.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                            showAppActionDialog(item);
+                            return true;
+                        }
+                        return false;
+                    } else if (event.getAction() == KeyEvent.ACTION_UP) {
+                        if (holder.longPressRunnable != null) {
+                            v.removeCallbacks(holder.longPressRunnable);
+                            holder.longPressRunnable = null;
+                        }
+                        if (holder.handledLongPress) {
+                            holder.handledLongPress = false;
+                            return true; // 消费按键松开事件，彻底阻止误触发应用启动
+                        }
+                        return false;
+                    }
+                }
+                return false;
+            });
+
             holder.card.setOnFocusChangeListener((v, hasFocus) -> {
+                if (!hasFocus) {
+                    if (holder.longPressRunnable != null) {
+                        v.removeCallbacks(holder.longPressRunnable);
+                        holder.longPressRunnable = null;
+                    }
+                    holder.handledLongPress = false;
+                }
                 float scale = hasFocus ? 1.10f : 1.0f;
                 if (animations) {
                     holder.card.animate().scaleX(scale).scaleY(scale).translationZ(hasFocus ? 8f : 0f).setDuration(160).start();
@@ -394,6 +485,8 @@ final class AllAppsDialog extends Dialog {
         final ImageView icon;
         final TextView label;
         final TextView name;
+        Runnable longPressRunnable;
+        boolean handledLongPress;
 
         AllAppsHolder(@NonNull View itemView) {
             super(itemView);
