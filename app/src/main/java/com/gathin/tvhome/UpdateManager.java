@@ -106,9 +106,62 @@ public final class UpdateManager {
                         public void checkServerTrusted(X509Certificate[] certs, String authType) {}
                     }
                 };
-                SSLContext sc = SSLContext.getInstance("TLS");
+                SSLContext sc;
+                try {
+                    sc = SSLContext.getInstance("TLSv1.2");
+                } catch (Exception e) {
+                    sc = SSLContext.getInstance("TLS");
+                }
                 sc.init(null, trustAllCerts, new java.security.SecureRandom());
-                ((HttpsURLConnection) conn).setSSLSocketFactory(sc.getSocketFactory());
+                javax.net.ssl.SSLSocketFactory defaultFactory = sc.getSocketFactory();
+                javax.net.ssl.SSLSocketFactory wrappedFactory = new javax.net.ssl.SSLSocketFactory() {
+                    @Override
+                    public String[] getDefaultCipherSuites() {
+                        return defaultFactory.getDefaultCipherSuites();
+                    }
+
+                    @Override
+                    public String[] getSupportedCipherSuites() {
+                        return defaultFactory.getSupportedCipherSuites();
+                    }
+
+                    private java.net.Socket enableTls(java.net.Socket socket) {
+                        if (socket instanceof javax.net.ssl.SSLSocket) {
+                            try {
+                                ((javax.net.ssl.SSLSocket) socket).setEnabledProtocols(
+                                        ((javax.net.ssl.SSLSocket) socket).getSupportedProtocols());
+                            } catch (Exception ignored) {}
+                        }
+                        return socket;
+                    }
+
+                    @Override
+                    public java.net.Socket createSocket(java.net.Socket s, String host, int port, boolean autoClose) throws java.io.IOException {
+                        return enableTls(defaultFactory.createSocket(s, host, port, autoClose));
+                    }
+
+                    @Override
+                    public java.net.Socket createSocket(String host, int port) throws java.io.IOException {
+                        return enableTls(defaultFactory.createSocket(host, port));
+                    }
+
+                    @Override
+                    public java.net.Socket createSocket(String host, int port, java.net.InetAddress localHost, int localPort) throws java.io.IOException {
+                        return enableTls(defaultFactory.createSocket(host, port, localHost, localPort));
+                    }
+
+                    @Override
+                    public java.net.Socket createSocket(java.net.InetAddress host, int port) throws java.io.IOException {
+                        return enableTls(defaultFactory.createSocket(host, port));
+                    }
+
+                    @Override
+                    public java.net.Socket createSocket(java.net.InetAddress address, int port, java.net.InetAddress localAddress, int localPort) throws java.io.IOException {
+                        return enableTls(defaultFactory.createSocket(address, port, localAddress, localPort));
+                    }
+                };
+
+                ((HttpsURLConnection) conn).setSSLSocketFactory(wrappedFactory);
                 ((HttpsURLConnection) conn).setHostnameVerifier((hostname, session) -> true);
             } catch (Exception ignored) {}
         }
@@ -282,9 +335,10 @@ public final class UpdateManager {
                 URL url = new URL(downloadUrl);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 setupTrustAllSsl(conn);
-                conn.setRequestProperty("User-Agent", "PureTV-Launcher");
-                conn.setConnectTimeout(15000);
-                conn.setReadTimeout(15000);
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android " + Build.VERSION.RELEASE + "; " + Build.MODEL + ") PureTV-Launcher");
+                conn.setRequestProperty("Accept-Encoding", "identity");
+                conn.setConnectTimeout(25000);
+                conn.setReadTimeout(35000);
                 conn.setInstanceFollowRedirects(true);
 
                 int status = conn.getResponseCode();
@@ -296,9 +350,10 @@ public final class UpdateManager {
                     url = new URL(redirectUrl);
                     conn = (HttpURLConnection) url.openConnection();
                     setupTrustAllSsl(conn);
-                    conn.setRequestProperty("User-Agent", "PureTV-Launcher");
-                    conn.setConnectTimeout(15000);
-                    conn.setReadTimeout(15000);
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android " + Build.VERSION.RELEASE + "; " + Build.MODEL + ") PureTV-Launcher");
+                    conn.setRequestProperty("Accept-Encoding", "identity");
+                    conn.setConnectTimeout(25000);
+                    conn.setReadTimeout(35000);
                     status = conn.getResponseCode();
                 }
 
@@ -310,6 +365,9 @@ public final class UpdateManager {
                 int totalLength = conn.getContentLength();
                 File dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
                 if (dir == null) dir = context.getCacheDir();
+                if (dir != null && !dir.exists()) {
+                    dir.mkdirs();
+                }
                 File apkFile = new File(dir, "update.apk");
                 if (apkFile.exists()) apkFile.delete();
 
@@ -333,9 +391,13 @@ public final class UpdateManager {
                     }
                 }
                 out.flush();
+                try {
+                    apkFile.setReadable(true, false);
+                } catch (Exception ignored) {}
                 callback.onSuccess(apkFile);
 
             } catch (Exception e) {
+                android.util.Log.e("UpdateManager", "download failed", e);
                 callback.onError(e.getMessage() != null ? e.getMessage() : "网络异常");
             } finally {
                 try { if (in != null) in.close(); } catch (Exception ignored) {}
@@ -350,6 +412,10 @@ public final class UpdateManager {
     public static void installApk(Context context, File apkFile) {
         if (apkFile == null || !apkFile.exists()) return;
         try {
+            try {
+                apkFile.setReadable(true, false);
+            } catch (Exception ignored) {}
+
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 

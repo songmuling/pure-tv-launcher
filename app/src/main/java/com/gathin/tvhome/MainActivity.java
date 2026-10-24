@@ -454,11 +454,33 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 focusTile(lastFocused % COLUMNS);
                 return true;
             }
-            int firstButton = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? R.id.btnInputs : R.id.btnSettings;
-            int leftButton = rtlMenuBar ? R.id.btnSettings : firstButton;
-            int rightButton = rtlMenuBar ? firstButton : R.id.btnSettings;
-            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) return v.getId() == leftButton;
-            return keyCode == KeyEvent.KEYCODE_DPAD_RIGHT && v.getId() == rightButton;
+            View[] order = rtlMenuBar
+                    ? new View[]{btnSettings, btnUpdate, btnReorder, btnWifi, btnInputs}
+                    : new View[]{btnInputs, btnWifi, btnReorder, btnUpdate, btnSettings};
+            java.util.List<View> visibleButtons = new java.util.ArrayList<>();
+            for (View b : order) {
+                if (b != null && b.getVisibility() == View.VISIBLE && b.isFocusable()) {
+                    visibleButtons.add(b);
+                }
+            }
+            if (visibleButtons.isEmpty()) return false;
+
+            int idx = visibleButtons.indexOf(v);
+            if (keyCode == KeyEvent.KEYCODE_DPAD_LEFT) {
+                if (idx > 0) {
+                    visibleButtons.get(idx - 1).requestFocus();
+                    grid.playSoundEffect(SoundEffectConstants.NAVIGATION_LEFT);
+                }
+                return true;
+            }
+            if (keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                if (idx >= 0 && idx < visibleButtons.size() - 1) {
+                    visibleButtons.get(idx + 1).requestFocus();
+                    grid.playSoundEffect(SoundEffectConstants.NAVIGATION_RIGHT);
+                }
+                return true;
+            }
+            return false;
         };
         btnInputs.setOnKeyListener(pillKeys);
         btnWifi.setOnKeyListener(pillKeys);
@@ -1522,15 +1544,30 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
             if (position < COLUMNS) {
                 View target;
+                boolean hasInputs = btnInputs != null && btnInputs.getVisibility() == View.VISIBLE;
+                boolean hasUpdate = btnUpdate != null && btnUpdate.getVisibility() == View.VISIBLE;
+                View settingsView = findViewById(R.id.btnSettings);
+
                 if (position >= 5) {
-                    target = findViewById(R.id.btnSettings);
-                    if (target == null || target.getVisibility() != View.VISIBLE) {
-                        target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs : null;
+                    target = settingsView;
+                } else if (position >= 3) {
+                    if (hasUpdate) {
+                        target = btnUpdate;
+                    } else if (hasInputs) {
+                        target = btnInputs;
+                    } else {
+                        target = settingsView;
                     }
                 } else {
-                    target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs : findViewById(R.id.btnSettings);
+                    if (hasInputs) {
+                        target = btnInputs;
+                    } else if (hasUpdate) {
+                        target = btnUpdate;
+                    } else {
+                        target = settingsView;
+                    }
                 }
-                if (target != null && target.requestFocus()) {
+                if (target != null && target.getVisibility() == View.VISIBLE && target.requestFocus()) {
                     grid.playSoundEffect(SoundEffectConstants.NAVIGATION_UP);
                     return true;
                 }
@@ -1557,7 +1594,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override public void onLibraryUp() {
         if (adapter.appCount() == 0) {
-            View target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs : findViewById(R.id.btnSettings);
+            View target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs
+                    : (btnUpdate != null && btnUpdate.getVisibility() == View.VISIBLE) ? btnUpdate
+                    : findViewById(R.id.btnSettings);
             if (target != null) target.requestFocus();
             return;
         }
