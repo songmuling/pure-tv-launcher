@@ -59,9 +59,15 @@ public class TvProfileManager {
         String manufacturer = Build.MANUFACTURER != null ? Build.MANUFACTURER.toLowerCase() : "";
         String model = Build.MODEL != null ? Build.MODEL.toLowerCase() : "";
 
-        // 1. 优先检测创维特征（创维盒子通常为 Skyworth 或存在专属设置包）
-        if (brand.contains("skyworth") || manufacturer.contains("skyworth")
-                || isPackageInstalled(context, SkyworthProfile.PACKAGE_SETTINGS)) {
+        // 1. 优先检测创维电视特征（内置创维/酷开电视专属设置组件）
+        if (isPackageInstalled(context, SkyworthTvProfile.PACKAGE_SOFTSETTINGS)
+                || isPackageInstalled(context, SkyworthTvProfile.PACKAGE_SKY_SETTING)) {
+            return new SkyworthTvProfile();
+        }
+
+        // 2. 检测创维盒子特征（创维小湃盒子等通常为 Skyworth 或存在专属盒子设置包）
+        if (isPackageInstalled(context, SkyworthProfile.PACKAGE_SETTINGS)
+                || brand.contains("skyworth") || manufacturer.contains("skyworth")) {
             return new SkyworthProfile();
         }
 
