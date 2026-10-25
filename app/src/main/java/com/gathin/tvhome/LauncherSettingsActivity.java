@@ -10,10 +10,10 @@ import android.os.Bundle;
  * 避免单独 Activity 造成的黑屏闪烁与桌面底栏透底问题。
  */
 public final class LauncherSettingsActivity extends Activity {
-    public static final String MODE_RANDOM = "random";
-    public static final String MODE_WEATHER = "random"; // 向下兼容
     public static final String MODE_BING = "bing";
     public static final String MODE_OFF = "off";
+    public static final String MODE_RANDOM = "bing"; // 向下兼容
+    public static final String MODE_WEATHER = "bing"; // 向下兼容
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

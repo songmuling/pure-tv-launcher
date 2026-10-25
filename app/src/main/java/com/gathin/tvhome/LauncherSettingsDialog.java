@@ -42,7 +42,6 @@ public final class LauncherSettingsDialog extends Dialog {
     private final TextView[] columnChoices = new TextView[4];
     private TextView animationsChoice;
     private TextView advancedChoice;
-    private TextView wallpaperModeRandom;
     private TextView wallpaperModeBing;
     private TextView wallpaperModeOff;
     private TextView weatherCityChoice;
@@ -122,36 +121,19 @@ public final class LauncherSettingsDialog extends Dialog {
         });
 
         if (choices.contains("wallpaper_mode")) {
-            wallpaperMode = choices.getString("wallpaper_mode", LauncherSettingsActivity.MODE_RANDOM);
-            if ("weather".equals(wallpaperMode)) wallpaperMode = LauncherSettingsActivity.MODE_RANDOM;
+            wallpaperMode = choices.getString("wallpaper_mode", LauncherSettingsActivity.MODE_BING);
+            if (!LauncherSettingsActivity.MODE_OFF.equals(wallpaperMode)) {
+                wallpaperMode = LauncherSettingsActivity.MODE_BING;
+            }
         } else if (choices.contains("bing_wallpaper")) {
             wallpaperMode = choices.getBoolean("bing_wallpaper", true)
                     ? LauncherSettingsActivity.MODE_BING : LauncherSettingsActivity.MODE_OFF;
         } else {
-            wallpaperMode = LauncherSettingsActivity.MODE_RANDOM;
+            wallpaperMode = LauncherSettingsActivity.MODE_BING;
         }
 
-        wallpaperModeRandom = findViewById(R.id.wallpaperModeRandom);
         wallpaperModeBing = findViewById(R.id.wallpaperModeBing);
         wallpaperModeOff = findViewById(R.id.wallpaperModeOff);
-
-        wallpaperModeRandom.setOnClickListener(v -> {
-            wallpaperMode = LauncherSettingsActivity.MODE_RANDOM;
-            choices.edit().putString("wallpaper_mode", LauncherSettingsActivity.MODE_RANDOM).apply();
-            refresh();
-
-            // 无论之前是否已是随机壁纸，每次点选都强制随机换一张新壁纸！
-            Toast.makeText(activity, R.string.wallpaper_random_switching, Toast.LENGTH_SHORT).show();
-            RandomWallpaper.pickNextRandom(activity, file -> {
-                if (!isShowing()) return;
-                if (file != null) {
-                    Toast.makeText(activity, R.string.wallpaper_random_switched, Toast.LENGTH_SHORT).show();
-                    if (callback != null) callback.onWallpaperChanged();
-                } else {
-                    Toast.makeText(activity, R.string.wallpaper_random_failed, Toast.LENGTH_SHORT).show();
-                }
-            });
-        });
 
         wallpaperModeBing.setOnClickListener(v -> {
             setWallpaperMode(LauncherSettingsActivity.MODE_BING);
@@ -311,13 +293,10 @@ public final class LauncherSettingsDialog extends Dialog {
         advancedChoice.setEnabled(animations);
         advancedChoice.setAlpha(animations ? 1f : 0.5f);
 
-        boolean isRandom = LauncherSettingsActivity.MODE_RANDOM.equals(wallpaperMode) || "weather".equals(wallpaperMode);
-        boolean isBing = LauncherSettingsActivity.MODE_BING.equals(wallpaperMode);
         boolean isOff = LauncherSettingsActivity.MODE_OFF.equals(wallpaperMode);
-        wallpaperModeRandom.setSelected(isRandom);
+        boolean isBing = !isOff;
         wallpaperModeBing.setSelected(isBing);
         wallpaperModeOff.setSelected(isOff);
-        wallpaperModeRandom.setText((isRandom ? "● " : "○ ") + activity.getString(R.string.wallpaper_mode_random));
         wallpaperModeBing.setText((isBing ? "● " : "○ ") + activity.getString(R.string.wallpaper_mode_bing));
         wallpaperModeOff.setText((isOff ? "● " : "○ ") + activity.getString(R.string.wallpaper_mode_off));
 

@@ -131,6 +131,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private boolean advancedEffects;
     private TextView greeting;
     private View btnInputs;
+    private View btnWallpaper;
+    private TextView wallpaperTitlePill;
     private TextView btnWifi;
     private TextView shamsiDate;
     private TextView stats;
@@ -415,6 +417,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             open(systemIntent(Settings.ACTION_WIFI_SETTINGS));
             return true;
         });
+        btnWallpaper = findViewById(R.id.btnWallpaper);
+        if (btnWallpaper != null) {
+            btnWallpaper.setOnClickListener(v -> triggerChangeWallpaper());
+        }
+        wallpaperTitlePill = findViewById(R.id.wallpaperTitlePill);
         btnSettings.setOnClickListener(v -> open(systemIntent(Settings.ACTION_SETTINGS)));
         btnSettings.setOnLongClickListener(v -> {
             showLauncherSettings();
@@ -1142,6 +1149,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         if (heroName != null && heroName.getVisibility() != View.GONE) {
             heroName.setVisibility(visible ? View.VISIBLE : View.INVISIBLE);
+        }
+        if (wallpaperTitlePill != null) {
+            wallpaperTitlePill.setVisibility(View.GONE);
         }
     }
 
@@ -2123,15 +2133,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     private boolean isMinimalTheme() {
         SharedPreferences sp = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
-        String mode;
-        if (sp.contains("wallpaper_mode")) {
-            mode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_RANDOM);
-            if ("weather".equals(mode)) mode = LauncherSettingsActivity.MODE_RANDOM;
-        } else if (sp.contains("bing_wallpaper")) {
-            mode = sp.getBoolean("bing_wallpaper", true) ? LauncherSettingsActivity.MODE_BING : LauncherSettingsActivity.MODE_OFF;
-        } else {
-            mode = LauncherSettingsActivity.MODE_RANDOM;
-        }
+        String mode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_BING);
         return LauncherSettingsActivity.MODE_OFF.equals(mode);
     }
 
@@ -2148,18 +2150,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
 
         SharedPreferences sp = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
-        String mode;
-        if (sp.contains("wallpaper_mode")) {
-            mode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_RANDOM);
-            if ("weather".equals(mode)) mode = LauncherSettingsActivity.MODE_RANDOM;
-        } else if (sp.contains("bing_wallpaper")) {
-            mode = sp.getBoolean("bing_wallpaper", true) ? LauncherSettingsActivity.MODE_BING : LauncherSettingsActivity.MODE_OFF;
-        } else {
-            mode = LauncherSettingsActivity.MODE_RANDOM;
-        }
+        String mode = sp.getString("wallpaper_mode", LauncherSettingsActivity.MODE_BING);
+        boolean minimal = LauncherSettingsActivity.MODE_OFF.equals(mode);
 
         if (ambient != null) {
-            boolean minimal = LauncherSettingsActivity.MODE_OFF.equals(mode);
             ambient.setVisibility(minimal ? View.VISIBLE : View.GONE);
             if (!minimal) {
                 stopAmbientAnimation();
@@ -2168,34 +2162,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             }
         }
 
-        if (LauncherSettingsActivity.MODE_RANDOM.equals(mode)) {
-            File cachedRandom = RandomWallpaper.getCachedWallpaper(this);
-            if (cachedRandom != null) {
-                wallpaperPlayer.setWallpaper(cachedRandom, 45, true);
+        if (!minimal) {
+            File cached = RandomWallpaper.getCachedWallpaper(this);
+            if (cached != null) {
+                wallpaperPlayer.setWallpaper(cached, 45, false);
             } else if (!wallpaperPlayer.hasWallpaper()) {
                 wallpaperPlayer.setWallpaperResource(R.drawable.wallpaper_default, 45);
-                RandomWallpaper.pickNextRandom(this, file -> {
+                RandomWallpaper.pickNextRandom(this, (file, title) -> {
                     if (isFinishing() || isDestroyed()) return;
                     if (file != null) {
                         wallpaperPlayer.setWallpaper(file, 45, true);
                     }
                 });
             }
-            WeatherManager.fetch(this, force, info -> {
-                if (isFinishing() || isDestroyed()) return;
-                applyWeather(info);
-            });
-        } else if (LauncherSettingsActivity.MODE_BING.equals(mode)) {
-            File cachedBing = BingWallpaper.getCachedWallpaper(this);
-            if (cachedBing != null) {
-                wallpaperPlayer.setWallpaper(cachedBing, 45);
-            } else if (!wallpaperPlayer.hasWallpaper()) {
-                wallpaperPlayer.setWallpaperResource(R.drawable.wallpaper_default, 45);
-            }
-            BingWallpaper.fetch(this, file -> {
-                if (isFinishing() || isDestroyed()) return;
-                wallpaperPlayer.setWallpaper(file, 45);
-            });
             WeatherManager.fetch(this, force, info -> {
                 if (isFinishing() || isDestroyed()) return;
                 applyWeather(info);
@@ -2207,6 +2186,51 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 applyWeather(info);
             });
         }
+    }
+
+    private final Runnable hideWallpaperTitleRunnable = () -> {
+        if (wallpaperTitlePill != null) {
+            wallpaperTitlePill.animate().alpha(0f).setDuration(400).withEndAction(() -> {
+                wallpaperTitlePill.setVisibility(View.GONE);
+            }).start();
+        }
+    };
+
+    private void showWallpaperTitlePill(String title) {
+        if (wallpaperTitlePill == null || title == null || title.trim().isEmpty()) return;
+        handler.removeCallbacks(hideWallpaperTitleRunnable);
+        wallpaperTitlePill.setText("📷 " + title.trim());
+        wallpaperTitlePill.setVisibility(View.VISIBLE);
+        wallpaperTitlePill.setAlpha(0f);
+        wallpaperTitlePill.animate().alpha(1f).setDuration(250).start();
+        handler.postDelayed(hideWallpaperTitleRunnable, 3000);
+    }
+
+    private void triggerChangeWallpaper() {
+        SharedPreferences sp = getSharedPreferences(Config.SETTINGS_NAME, MODE_PRIVATE);
+        boolean wasMinimal = isMinimalTheme();
+        if (wasMinimal) {
+            sp.edit().putString("wallpaper_mode", LauncherSettingsActivity.MODE_BING)
+                    .putBoolean("bing_wallpaper", true).apply();
+            if (ambient != null) {
+                ambient.setVisibility(View.GONE);
+                stopAmbientAnimation();
+                ambient.animate().cancel();
+                ambient.setAlpha(0f);
+            }
+            Toast.makeText(this, R.string.switched_to_bing_wallpaper, Toast.LENGTH_SHORT).show();
+        }
+
+        Toast.makeText(this, R.string.wallpaper_random_switching, Toast.LENGTH_SHORT).show();
+        RandomWallpaper.pickNextRandom(this, (file, title) -> {
+            if (isFinishing() || isDestroyed()) return;
+            if (file != null) {
+                wallpaperPlayer.setWallpaper(file, 45, true);
+                showWallpaperTitlePill(title);
+            } else {
+                Toast.makeText(this, R.string.wallpaper_random_failed, Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void applyWeather(WeatherManager.WeatherInfo info) {
