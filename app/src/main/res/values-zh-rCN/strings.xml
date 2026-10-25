@@ -58,9 +58,6 @@
         <item quantity="other">%1$d 个应用</item>
     </plurals>
     <string name="greeting_with_name">%1$s，%2$s</string>
-    <string name="bing_wallpaper_on">开启必应每日壁纸</string>
-    <string name="bing_wallpaper_off">关闭必应每日壁纸</string>
-    <string name="bing_wallpaper_label">必应每日壁纸：%1$s</string>
     <string name="tile_action_move">移动排序</string>
     <string name="tile_action_pin_dock">置顶到首行常用</string>
     <string name="tile_action_unpin_dock">移出首行常用</string>

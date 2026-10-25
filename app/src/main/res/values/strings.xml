@@ -90,9 +90,6 @@
     </plurals>
     <!-- The greeting, then greeting_name: "Good morning, Mr. Trịnh". -->
     <string name="greeting_with_name">%1$s, %2$s</string>
-    <string name="bing_wallpaper_on">Enable Bing Daily Wallpaper</string>
-    <string name="bing_wallpaper_off">Disable Bing Daily Wallpaper</string>
-    <string name="bing_wallpaper_label">Bing Daily Wallpaper: %1$s</string>
     <string name="tile_action_move">Move / Reorder</string>
     <string name="tile_action_pin_dock">Pin to Top Dock</string>
     <string name="tile_action_unpin_dock">Remove from Dock</string>

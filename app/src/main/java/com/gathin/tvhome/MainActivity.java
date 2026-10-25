@@ -133,6 +133,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private View btnInputs;
     private View btnWallpaper;
     private View btnSettings;
+    private int lastFocusedTopButtonId = 0;
     private TextView wallpaperTitlePill;
     private TextView btnWifi;
     private TextView shamsiDate;
@@ -423,7 +424,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             btnWallpaper.setOnClickListener(v -> triggerChangeWallpaper());
         }
         wallpaperTitlePill = findViewById(R.id.wallpaperTitlePill);
-        btnSettings.setOnClickListener(v -> open(systemIntent(Settings.ACTION_SETTINGS)));
+        btnSettings.setOnClickListener(v -> {
+            lastFocusedTopButtonId = R.id.btnSettings;
+            open(systemIntent(Settings.ACTION_SETTINGS));
+        });
         btnSettings.setOnLongClickListener(v -> {
             showLauncherSettings();
             return true;
@@ -573,6 +577,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         if (openLauncherSettingsIfAsked(intent)) return;
         if (intent == null || !intent.hasCategory(Intent.CATEGORY_HOME)) return;
+        lastFocusedTopButtonId = 0;
         grid.scrollToPosition(0);
         lastFocused = 0;
         lastFocusedKey = adapter.getItemCount() > 0 ? adapter.keyAt(0) : null;
@@ -603,6 +608,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (rebuildOnResume) {
             tilesReady = false;
             reloadApps(true);
+        } else if (lastFocusedTopButtonId != 0) {
+            final int topBtnId = lastFocusedTopButtonId;
+            lastFocusedTopButtonId = 0;
+            View topBtn = findViewById(topBtnId);
+            if (topBtn != null && topBtn.getVisibility() == View.VISIBLE) {
+                topBtn.post(() -> {
+                    if (!isFinishing() && !isDestroyed()) {
+                        topBtn.requestFocus();
+                    }
+                });
+            }
         }
         rebuildOnResume = false;
         updateGreeting();
@@ -686,6 +702,21 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
      * reload() the view that holds focus may no longer show the app it had.
      */
     private void restoreFocus() {
+        if (lastFocusedTopButtonId != 0) {
+            final int topBtnId = lastFocusedTopButtonId;
+            lastFocusedTopButtonId = 0;
+            View topBtn = findViewById(topBtnId);
+            if (topBtn != null && topBtn.getVisibility() == View.VISIBLE) {
+                topBtn.post(() -> {
+                    if (!isFinishing() && !isDestroyed()) {
+                        topBtn.requestFocus();
+                    }
+                });
+                tilesReady = true;
+                showCardPrompt();
+                return;
+            }
+        }
         final boolean returnToLibrary = libraryFocusPending;
         final String returnKey = lastFocusedKey;
         final int returnSlot = lastFocused;
@@ -701,6 +732,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onPause() {
         super.onPause();
+        View focused = getCurrentFocus();
+        if (focused != null) {
+            int id = focused.getId();
+            if (id == R.id.btnSettings || id == R.id.btnWallpaper || id == R.id.btnInputs || id == R.id.btnWifi) {
+                lastFocusedTopButtonId = id;
+            }
+        }
         endReorder();   // Home or another app while reordering keeps the order so far
         wallpaperPlayer.stop();
         stopAmbientAnimation();
