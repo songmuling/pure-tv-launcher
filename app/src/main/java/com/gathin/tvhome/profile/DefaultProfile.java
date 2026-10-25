@@ -25,7 +25,7 @@ public class DefaultProfile implements TvProfile {
 
     @Override
     public boolean shouldShowInputsPill(Context context) {
-        return false;
+        return true;
     }
 
     @Override

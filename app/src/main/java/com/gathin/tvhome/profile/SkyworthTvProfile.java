@@ -55,9 +55,8 @@ public class SkyworthTvProfile extends DefaultProfile {
 
     @Override
     public boolean shouldShowInputsPill(Context context) {
-        // 创维电视具备物理 HDMI 1/2/ARC 和 AV 信号输入源，展示信号源切换胶囊
-        Intent sourceIntent = new Intent().setComponent(new ComponentName(PACKAGE_SKY_SETTING, CLASS_SKY_SOURCE));
-        return sourceIntent.resolveActivity(context.getPackageManager()) != null;
+        // 创维电视：用户不需要在桌面展示输入源切换胶囊，彻底隐藏
+        return false;
     }
 
     @Override

@@ -1940,6 +1940,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     /** Hides the Inputs pill when it would have nothing to list: streaming boxes have no HDMI-in, AV or tuner. */
     private void updateInputsButton() {
+        // 厂商专属策略优先判断：若 Profile 明确禁止或不展示输入源胶囊，直接彻底隐藏
+        if (!TvProfileManager.getProfile(this).shouldShowInputsPill(this)) {
+            btnInputs.setVisibility(View.GONE);
+            return;
+        }
         boolean any = liveTvIntent() != null || !sourcePanelService.isEmpty();
         TvInputManager tim = (TvInputManager) getSystemService(TV_INPUT_SERVICE);
         if (!any && tim != null) {
@@ -1955,10 +1960,6 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     }
                 }
             } catch (Throwable ignored) {}
-        }
-        // 厂商专属策略判断是否显示输入源按键（如小米电视/带HDMI直达面板的设备）
-        if (!any && TvProfileManager.getProfile(this).shouldShowInputsPill(this)) {
-            any = true;
         }
         btnInputs.setVisibility(any ? View.VISIBLE : View.GONE);
     }
