@@ -132,6 +132,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private TextView greeting;
     private View btnInputs;
     private View btnWallpaper;
+    private View btnSettings;
     private TextView wallpaperTitlePill;
     private TextView btnWifi;
     private TextView shamsiDate;
@@ -410,7 +411,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         });
 
         btnInputs = findViewById(R.id.btnInputs);
-        View btnSettings = findViewById(R.id.btnSettings);
+        btnSettings = findViewById(R.id.btnSettings);
         btnInputs.setOnClickListener(v -> showInputs());
         btnWifi.setOnClickListener(v -> openNetworkPill());
         btnWifi.setOnLongClickListener(v -> {
@@ -463,8 +464,8 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                 return true;
             }
             View[] order = rtlMenuBar
-                    ? new View[]{btnSettings, btnReorder, btnWifi, btnInputs}
-                    : new View[]{btnInputs, btnWifi, btnReorder, btnSettings};
+                    ? new View[]{btnSettings, btnWallpaper, btnReorder, btnWifi, btnInputs}
+                    : new View[]{btnInputs, btnWifi, btnReorder, btnWallpaper, btnSettings};
             java.util.List<View> visibleButtons = new java.util.ArrayList<>();
             for (View b : order) {
                 if (b != null && b.getVisibility() == View.VISIBLE && b.isFocusable()) {
@@ -494,8 +495,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         btnWifi.setOnKeyListener(pillKeys);
         btnSettings.setOnKeyListener(pillKeys);
         btnReorder.setOnKeyListener(pillKeys);
+        if (btnWallpaper != null) {
+            btnWallpaper.setOnKeyListener(pillKeys);
+        }
         if (advancedEffects) {
-            for (View button : new View[]{btnInputs, btnWifi, btnReorder, btnSettings}) {
+            for (View button : new View[]{btnInputs, btnWifi, btnReorder, btnWallpaper, btnSettings}) {
                 if (button != null) {
                     button.setOnFocusChangeListener((view, focused) -> view.animate()
                             .scaleX(focused ? 1.04f : 1f).scaleY(focused ? 1.04f : 1f)
@@ -1181,6 +1185,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
                     rebuildOnResume = true;
                     reloadApps(false);
                 }
+                if (btnSettings != null) {
+                    btnSettings.post(() -> {
+                        if (!isFinishing() && !isDestroyed()) {
+                            btnSettings.requestFocus();
+                        }
+                    });
+                }
             }
 
             @Override
@@ -1564,6 +1575,25 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     // ---- navigation ------------------------------------------------------------------------------
 
+    private View getTopButtonForColumn(int col, int totalCols) {
+        boolean rtlMenuBar = getResources().getBoolean(R.bool.rtl_menu_bar);
+        View[] order = rtlMenuBar
+                ? new View[]{btnSettings, btnWallpaper, btnReorder, btnWifi, btnInputs}
+                : new View[]{btnInputs, btnWifi, btnReorder, btnWallpaper, btnSettings};
+        java.util.List<View> visible = new java.util.ArrayList<>();
+        for (View b : order) {
+            if (b != null && b.getVisibility() == View.VISIBLE && b.isFocusable()) {
+                visible.add(b);
+            }
+        }
+        if (visible.isEmpty()) return null;
+        if (visible.size() == 1) return visible.get(0);
+
+        int index = (col * visible.size()) / Math.max(1, totalCols);
+        index = Math.max(0, Math.min(index, visible.size() - 1));
+        return visible.get(index);
+    }
+
     @Override
     public boolean onTileVerticalKey(int position, int keyCode) {
         int count = adapter.appCount();
@@ -1573,15 +1603,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         if (keyCode == KeyEvent.KEYCODE_DPAD_UP) {
             if (position < COLUMNS) {
-                View target;
-                if (position >= 5) {
-                    target = findViewById(R.id.btnSettings);
-                    if (target == null || target.getVisibility() != View.VISIBLE) {
-                        target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs : null;
-                    }
-                } else {
-                    target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs : findViewById(R.id.btnSettings);
-                }
+                View target = getTopButtonForColumn(position, COLUMNS);
                 if (target != null && target.requestFocus()) {
                     grid.playSoundEffect(SoundEffectConstants.NAVIGATION_UP);
                     return true;
@@ -1609,7 +1631,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
 
     @Override public void onLibraryUp() {
         if (adapter.appCount() == 0) {
-            View target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs : findViewById(R.id.btnSettings);
+            View target = getTopButtonForColumn(0, COLUMNS);
             if (target != null) target.requestFocus();
             return;
         }
@@ -1669,7 +1691,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         if (adapter.appCount() == 0) {
             if (adapter.isLibraryAt(0)) focusLibrary();
             else {
-                View target = (btnInputs != null && btnInputs.getVisibility() == View.VISIBLE) ? btnInputs : findViewById(R.id.btnSettings);
+                View target = getTopButtonForColumn(0, COLUMNS);
                 if (target != null) target.requestFocus();
             }
             return;

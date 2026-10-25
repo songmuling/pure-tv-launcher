@@ -243,6 +243,8 @@
                     style="@style/TopButton"
                     android:text="@string/change_wallpaper"
                     android:drawableStart="@drawable/ic_wallpaper"
+                    android:focusable="true"
+                    android:clickable="true"
                     android:nextFocusDown="@+id/grid" />
 
                 <TextView

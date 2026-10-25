@@ -202,6 +202,12 @@
                     android:drawableStart="@drawable/ic_settings"
                     android:nextFocusDown="@+id/grid" />
 
+                <TextView
+                    android:id="@+id/btnWallpaper"
+                    style="@style/TopButton"
+                    android:text="@string/change_wallpaper"
+                    android:drawableStart="@drawable/ic_wallpaper"
+                    android:nextFocusDown="@+id/grid" />
 
                 <TextView
                     android:id="@+id/btnReorder"
