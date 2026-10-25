@@ -405,11 +405,41 @@ public final class UpdateManager {
                 }
 
                 int totalLength = conn.getContentLength();
-                File dir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-                if (dir == null) dir = context.getCacheDir();
-                if (dir != null && !dir.exists()) {
-                    dir.mkdirs();
+                File dir = null;
+                // 1. 优先尝试外部下载目录
+                try {
+                    File extDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+                    if (extDir != null && (extDir.exists() || extDir.mkdirs())) {
+                        File probe = new File(extDir, ".probe");
+                        if (probe.createNewFile()) {
+                            probe.delete();
+                            dir = extDir;
+                        }
+                    }
+                } catch (Throwable ignored) {}
+
+                // 2. 外部缓存目录降级探测
+                if (dir == null) {
+                    try {
+                        File extCache = context.getExternalCacheDir();
+                        if (extCache != null && (extCache.exists() || extCache.mkdirs())) {
+                            File probe = new File(extCache, ".probe");
+                            if (probe.createNewFile()) {
+                                probe.delete();
+                                dir = extCache;
+                            }
+                        }
+                    } catch (Throwable ignored) {}
                 }
+
+                // 3. 终极安全回退：内部缓存 updates 目录（拥有完全读写权限，彻底规避 EACCES 权限拒绝）
+                if (dir == null) {
+                    dir = new File(context.getCacheDir(), "updates");
+                    if (!dir.exists()) {
+                        dir.mkdirs();
+                    }
+                }
+
                 File apkFile = new File(dir, "update.apk");
                 if (apkFile.exists()) apkFile.delete();
 
@@ -435,6 +465,8 @@ public final class UpdateManager {
                 out.flush();
                 try {
                     apkFile.setReadable(true, false);
+                    File parent = apkFile.getParentFile();
+                    if (parent != null) parent.setReadable(true, false);
                 } catch (Exception ignored) {}
                 callback.onSuccess(apkFile);
 
@@ -456,6 +488,8 @@ public final class UpdateManager {
         try {
             try {
                 apkFile.setReadable(true, false);
+                File parent = apkFile.getParentFile();
+                if (parent != null) parent.setReadable(true, false);
             } catch (Exception ignored) {}
 
             Intent intent = new Intent(Intent.ACTION_VIEW);
@@ -467,7 +501,20 @@ public final class UpdateManager {
                         context.getPackageName() + ".fileprovider", apkFile);
                 intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
             } else {
-                intent.setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
+                // 针对 Android 6.0 及以下（如小米电视 4A）：
+                // 先尝试通过 FileProvider 授权方式拉起，若失败则安全降级到 Uri.fromFile
+                boolean providerSuccess = false;
+                try {
+                    Uri apkUri = FileProvider.getUriForFile(context,
+                            context.getPackageName() + ".fileprovider", apkFile);
+                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+                    providerSuccess = true;
+                } catch (Throwable ignored) {}
+
+                if (!providerSuccess) {
+                    intent.setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
+                }
             }
 
             context.startActivity(intent);

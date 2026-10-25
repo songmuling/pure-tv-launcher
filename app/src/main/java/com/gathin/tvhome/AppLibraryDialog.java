@@ -380,11 +380,7 @@ final class AppLibraryDialog {
         addAction(rows, R.string.library_open, () -> open(app));
         addAction(rows, R.string.library_app_info, () -> {
             close();
-            try {
-                activity.startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + pkg)));
-            } catch (ActivityNotFoundException | SecurityException e) {
-                Toast.makeText(activity, activity.getString(R.string.cant_open, label(app)), Toast.LENGTH_SHORT).show();
-            }
+            AppDetailsDialog.openAppDetails(activity, pkg);
         });
         int menuWidth = dp(220);
         for (int i = 0; i < rows.getChildCount(); i++) {

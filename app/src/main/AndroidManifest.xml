@@ -17,6 +17,10 @@
         tools:ignore="CoarseFineLocation" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28"
+        tools:ignore="ScopedStorage" />
 
     <!-- Android 11+ package visibility: lets the launcher list the TV apps it shows as tiles, and the
          apps that declare a module card (docs/specs/card.md). -->

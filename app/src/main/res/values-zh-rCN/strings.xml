@@ -107,4 +107,15 @@
     <string name="download_progress_format">正在下载... %1$d%%</string>
     <string name="download_failed">下载失败：%1$s</string>
     <string name="download_success_installing">下载完成，正在调起系统安装...</string>
+    <string name="app_details_title">应用详情</string>
+    <string name="app_details_package">应用包名</string>
+    <string name="app_details_version">应用版本</string>
+    <string name="app_details_size">安装大小</string>
+    <string name="app_details_updated">更新时间</string>
+    <string name="app_details_type_user">用户安装应用</string>
+    <string name="app_details_type_system">系统预置应用</string>
+    <string name="app_details_btn_open">打开应用</string>
+    <string name="app_details_btn_manage">应用管理</string>
+    <string name="app_details_btn_uninstall">卸载应用</string>
+    <string name="app_details_btn_close">关闭</string>
 </resources>

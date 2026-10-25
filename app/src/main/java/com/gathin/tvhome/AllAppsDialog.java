@@ -352,14 +352,7 @@ final class AllAppsDialog extends Dialog {
     }
 
     private void openAppDetails(String pkg) {
-        try {
-            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-            intent.setData(Uri.parse("package:" + pkg));
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            activity.startActivity(intent);
-        } catch (Exception e) {
-            Toast.makeText(activity, R.string.not_available, Toast.LENGTH_SHORT).show();
-        }
+        AppDetailsDialog.openAppDetails(activity, pkg);
     }
 
     private class AllAppsAdapter extends RecyclerView.Adapter<AllAppsHolder> {

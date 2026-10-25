@@ -139,4 +139,15 @@
     <string name="download_progress_format">Downloading... %1$d%%</string>
     <string name="download_failed">Download failed: %1$s</string>
     <string name="download_success_installing">Downloaded, launching system installer...</string>
+    <string name="app_details_title">App Details</string>
+    <string name="app_details_package">Package</string>
+    <string name="app_details_version">Version</string>
+    <string name="app_details_size">Size</string>
+    <string name="app_details_updated">Updated</string>
+    <string name="app_details_type_user">User App</string>
+    <string name="app_details_type_system">System App</string>
+    <string name="app_details_btn_open">Open App</string>
+    <string name="app_details_btn_manage">App Manager</string>
+    <string name="app_details_btn_uninstall">Uninstall</string>
+    <string name="app_details_btn_close">Close</string>
 </resources>
