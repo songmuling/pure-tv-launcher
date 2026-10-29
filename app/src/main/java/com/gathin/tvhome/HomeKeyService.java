@@ -71,17 +71,50 @@ public class HomeKeyService extends AccessibilityService {
             return false;
         }
         if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
-            Intent home = new Intent(Intent.ACTION_MAIN)
-                    .addCategory(Intent.CATEGORY_HOME)
-                    .setPackage(getPackageName())
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
-            startActivity(home);
+            launchHomeClean();
         }
         return true;
     }
 
+    private long lastHomeLaunchTime = 0;
+
+    /**
+     * 强行返回 Pure TV 桌面并收起小米电视设置等一切悬浮侧边栏
+     */
+    private void launchHomeClean() {
+        try {
+            // 发送系统关闭弹窗广播，小米设置、侧边栏等收到后会立刻自我 dismiss
+            sendBroadcast(new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
+        } catch (Exception ignored) {}
+
+        Intent home = new Intent(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_HOME)
+                .setClass(this, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK 
+                        | Intent.FLAG_ACTIVITY_CLEAR_TOP 
+                        | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        try {
+            startActivity(home);
+        } catch (Exception ignored) {}
+    }
+
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
+        if (event == null) return;
+        if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            CharSequence pkgName = event.getPackageName();
+            if (pkgName != null) {
+                String pkg = pkgName.toString();
+                // 仅针对小米原生 PatchWall 桌面：检测到其露头瞬间（冷启动或意外切回）在 0.05 秒内秒速盖回 Pure TV
+                if ("com.mitv.tvhome".equals(pkg)) {
+                    long now = System.currentTimeMillis();
+                    if (now - lastHomeLaunchTime > 400) {
+                        lastHomeLaunchTime = now;
+                        launchHomeClean();
+                    }
+                }
+            }
+        }
     }
 
     @Override

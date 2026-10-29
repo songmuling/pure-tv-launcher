@@ -496,25 +496,14 @@ public final class UpdateManager {
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                // Android 7.0+ (如创维盒子 Android 9.0) 强制要求 FileProvider
                 intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 Uri apkUri = FileProvider.getUriForFile(context,
                         context.getPackageName() + ".fileprovider", apkFile);
                 intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
             } else {
-                // 针对 Android 6.0 及以下（如小米电视 4A）：
-                // 先尝试通过 FileProvider 授权方式拉起，若失败则安全降级到 Uri.fromFile
-                boolean providerSuccess = false;
-                try {
-                    Uri apkUri = FileProvider.getUriForFile(context,
-                            context.getPackageName() + ".fileprovider", apkFile);
-                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
-                    providerSuccess = true;
-                } catch (Throwable ignored) {}
-
-                if (!providerSuccess) {
-                    intent.setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
-                }
+                // 针对 Android 6.0 及以下（如小米电视 4A，API 23）：系统安装器只支持传统的 file:// 协议
+                intent.setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
             }
 
             context.startActivity(intent);

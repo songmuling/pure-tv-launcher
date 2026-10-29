@@ -62,24 +62,30 @@ public class InstallProxyActivity extends Activity {
         String targetPath = resolveOrCopyApk(uri);
 
         if (targetPath != null && new File(targetPath).exists()) {
-            Log.i(TAG, "Launching Skyworth AutoInstaller for: " + targetPath);
+            File apkFile = new File(targetPath);
+            boolean hasTianciInstaller = false;
             try {
-                Intent autoIntent = new Intent("coocaa.intent.action.AUTOINSTALLER");
-                autoIntent.setComponent(new ComponentName("com.tianci.autoinstaller", "com.tianci.autoinstaller.v2.AutoInstallerActivityV2"));
-                autoIntent.putExtra("apkfilepath", targetPath);
-                autoIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(autoIntent);
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to launch AutoInstallerActivityV2, fallback to action only", e);
+                getPackageManager().getPackageInfo("com.tianci.autoinstaller", 0);
+                hasTianciInstaller = true;
+            } catch (Exception ignored) {}
+
+            if (hasTianciInstaller) {
+                // 创维电视专属特权安装通道（绕过应用圈）
+                Log.i(TAG, "Launching Skyworth AutoInstaller for: " + targetPath);
                 try {
                     Intent autoIntent = new Intent("coocaa.intent.action.AUTOINSTALLER");
+                    autoIntent.setComponent(new ComponentName("com.tianci.autoinstaller", "com.tianci.autoinstaller.v2.AutoInstallerActivityV2"));
                     autoIntent.putExtra("apkfilepath", targetPath);
                     autoIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     startActivity(autoIntent);
-                } catch (Exception e2) {
-                    Log.e(TAG, "All autoinstaller launches failed", e2);
-                    Toast.makeText(this, "调起创维安装器失败: " + e2.getMessage(), Toast.LENGTH_LONG).show();
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to launch AutoInstallerActivityV2, fallback to native installer", e);
+                    UpdateManager.installApk(this, apkFile);
                 }
+            } else {
+                // 小米电视、创维盒子及其他标准设备：直接调用系统原生安全安装器，绝不走创维特权
+                Log.i(TAG, "Launching native PackageInstaller for: " + targetPath);
+                UpdateManager.installApk(this, apkFile);
             }
         } else {
             Toast.makeText(this, "解析安装包路径失败", Toast.LENGTH_SHORT).show();
