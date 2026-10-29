@@ -506,6 +506,12 @@ public final class UpdateManager {
                 intent.setDataAndType(Uri.fromFile(apkFile), "application/vnd.android.package-archive");
             }
 
+            // 优先指定系统原生安装器，消除“二选一”歧义弹窗
+            intent.setPackage("com.android.packageinstaller");
+            if (intent.resolveActivity(context.getPackageManager()) == null) {
+                intent.setPackage(null);
+            }
+
             context.startActivity(intent);
         } catch (Exception e) {
             Toast.makeText(context, "无法拉起安装器: " + e.getMessage(), Toast.LENGTH_LONG).show();

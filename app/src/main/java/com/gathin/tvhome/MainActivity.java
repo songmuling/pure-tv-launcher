@@ -60,6 +60,7 @@ import android.widget.TextView;
 import android.app.AlertDialog;
 import com.gathin.tvhome.profile.TvProfile;
 import com.gathin.tvhome.profile.TvProfileManager;
+import com.gathin.tvhome.profile.XiaomiProfile;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
 import android.content.pm.PackageManager;
@@ -599,6 +600,11 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onResume() {
         super.onResume();
+        if (TvProfileManager.getProfile(this) instanceof XiaomiProfile) {
+            try {
+                sendBroadcast(new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS));
+            } catch (Exception ignored) {}
+        }
         // A festival that started or ended while Home was in the background: rebuild with or without it.
         if (festive != festival.active(LocalDate.now())) {
             recreate();

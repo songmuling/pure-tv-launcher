@@ -7,6 +7,7 @@ import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
 
 import com.gathin.tvhome.profile.TvProfileManager;
+import com.gathin.tvhome.profile.XiaomiProfile;
 
 import java.util.Collections;
 import java.util.Map;
@@ -38,6 +39,11 @@ public class HomeKeyService extends AccessibilityService {
         settingsKeycodes = config.settingsKeycodes;
         settingsPanel = config.settingsKeyPanel;
         appKeys = RemoteKeys.parseAppKeys(config.appKeys);
+
+        // 如果是小米设备，服务连接完成时（如开机自启），确保切回 Pure TV 并关掉一切残存弹窗
+        if (TvProfileManager.getProfile(this) instanceof XiaomiProfile) {
+            launchHomeClean();
+        }
     }
 
     private boolean isSettingsKey(KeyEvent event) {
