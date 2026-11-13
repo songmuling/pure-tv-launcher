@@ -7,7 +7,6 @@ import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
 
 import com.gathin.tvhome.profile.TvProfileManager;
-import com.gathin.tvhome.profile.XiaomiProfile;
 
 import java.util.Collections;
 import java.util.Map;
@@ -39,11 +38,6 @@ public class HomeKeyService extends AccessibilityService {
         settingsKeycodes = config.settingsKeycodes;
         settingsPanel = config.settingsKeyPanel;
         appKeys = RemoteKeys.parseAppKeys(config.appKeys);
-
-        // 如果是小米设备，服务连接完成时（如开机自启），确保切回 Pure TV 并关掉一切残存弹窗
-        if (TvProfileManager.getProfile(this) instanceof XiaomiProfile) {
-            launchHomeClean();
-        }
     }
 
     private boolean isSettingsKey(KeyEvent event) {
@@ -82,8 +76,6 @@ public class HomeKeyService extends AccessibilityService {
         return true;
     }
 
-    private long lastHomeLaunchTime = 0;
-
     /**
      * 强行返回 Pure TV 桌面并收起小米电视设置等一切悬浮侧边栏
      */
@@ -106,21 +98,6 @@ public class HomeKeyService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        if (event == null) return;
-        if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
-            CharSequence pkgName = event.getPackageName();
-            if (pkgName != null) {
-                String pkg = pkgName.toString();
-                // 仅针对小米原生 PatchWall 桌面：检测到其露头瞬间（冷启动或意外切回）在 0.05 秒内秒速盖回 Pure TV
-                if ("com.mitv.tvhome".equals(pkg)) {
-                    long now = System.currentTimeMillis();
-                    if (now - lastHomeLaunchTime > 400) {
-                        lastHomeLaunchTime = now;
-                        launchHomeClean();
-                    }
-                }
-            }
-        }
     }
 
     @Override
