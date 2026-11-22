@@ -2,6 +2,7 @@ package com.gathin.tvhome;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.Intent;
+import android.os.SystemClock;
 import android.provider.Settings;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
@@ -28,6 +29,7 @@ public class HomeKeyService extends AccessibilityService {
     private boolean settingsPanel;
     /** app_keys, the same map InputKeyService reads, for setups that run only this service. */
     private Map<Integer, String> appKeys = Collections.emptyMap();
+    private long lastHomeLaunchTime = 0;
 
     @Override
     protected void onServiceConnected() {
@@ -98,6 +100,26 @@ public class HomeKeyService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
+        if (event == null) return;
+        if (event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            CharSequence pkgName = event.getPackageName();
+            CharSequence className = event.getClassName();
+            if (pkgName != null && className != null) {
+                String pkg = pkgName.toString();
+                String cls = className.toString();
+                // 仅针对小米电视：当且仅当小米原生 PatchWall 桌面主界面冒头时（如开机自启或底层意外切回），瞬间切回 Pure TV
+                // 绝不拦截小米后台服务（投屏、音频、打点等）、Toast、Dialog、或用户正在播放的视频应用
+                if ("com.mitv.tvhome".equals(pkg)) {
+                    if (cls.contains("MainActivityUserMode") || cls.endsWith(".MainActivity") || cls.contains("BootActivity")) {
+                        long now = SystemClock.uptimeMillis();
+                        if (now - lastHomeLaunchTime > 1000) {
+                            lastHomeLaunchTime = now;
+                            launchHomeClean();
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @Override
